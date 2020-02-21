@@ -42,3 +42,4 @@ Segue abaixo a lista de Métodos pré-definidos para manipulação das Entidades
 - Validate Custom
 - ID auto incrementado
 - File Custom (lógica customizada)
+
