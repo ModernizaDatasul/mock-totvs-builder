@@ -1,3 +1,4 @@
+const genUts = require('../utils/generic-utils.js');
 const dbUts = require('../utils/db-utils.js');
 const fileUts = require('../utils/file-utils.js');
 
@@ -27,13 +28,16 @@ module.exports = {
     get(req, res, entityCfg) {
         this.logRequest('GET', req);
 
+        let id = req.params.id;
+        if (entityCfg.base64Key) { id = genUts.atob(id); }
+
         const entityResponse = entityCfg.database.find((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, req.params.id);
+            return this.entityKeyCompare(entity, entityCfg.keys, id);
         });
 
         if (!entityResponse) {
             return res.status(400).json(
-                { error: `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${req.params.id}` }
+                { error: `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}` }
             );
         }
 
@@ -45,7 +49,8 @@ module.exports = {
 
         const entityDB = entityCfg.database;
         const newEntity = req.body;
-        const id = newEntity[entityCfg.keys[0]]; // Alterar para tratar chave composta
+
+        const id = this.getEntityKeyValue(newEntity, entityCfg.keys);
 
         const index = entityDB.findIndex((entity) => {
             return this.entityKeyCompare(entity, entityCfg.keys, id);
@@ -67,14 +72,17 @@ module.exports = {
     update(req, res, entityCfg, fileName) {
         this.logRequest('PUT (update)', req);
 
+        let id = req.params.id;
+        if (entityCfg.base64Key) { id = genUts.atob(id); }
+
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, req.params.id);
+            return this.entityKeyCompare(entity, entityCfg.keys, id);
         });
 
         if (index === -1) {
             return res.status(400).json(
-                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${req.params.id}`)
+                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}`)
             );
         }
 
@@ -92,14 +100,17 @@ module.exports = {
     delete(req, res, entityCfg, fileName) {
         this.logRequest('DELETE', req);
 
+        let id = req.params.id;
+        if (entityCfg.base64Key) { id = genUts.atob(id); }
+
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, req.params.id);
+            return this.entityKeyCompare(entity, entityCfg.keys, id);
         });
 
         if (index === -1) {
             return res.status(400).json(
-                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${req.params.id}`)
+                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}`)
             );
         }
 
@@ -112,19 +123,34 @@ module.exports = {
         });
     },
 
-    entityKeyCompare(entity, entityKeys, id) {
-        const entityKey = entityKeys[0]; // Alterar para tratar chave composta
+    getEntityKeyValue(entity, entityKeys) {
+        let listValues = [];
+        entityKeys.forEach(entityKey => {
+            listValues.push(entity[entityKey]);
+        });
 
-        if (typeof entity[entityKey] === 'string') {
-            return entity[entityKey].toUpperCase() === id.toUpperCase();
+        let entityKeyValue = listValues.join(";");
+
+        if (typeof entityKeyValue === 'string') {
+            entityKeyValue = entityKeyValue.toUpperCase();
         }
-        return entity[entityKey] == id; // o "tipo" pode diferente, então usa "==" 
+        return entityKeyValue;
+    },
+
+    entityKeyCompare(entity, entityKeys, id) {
+        if (typeof id === 'string') {
+            id = id.toUpperCase();
+        }
+
+        const entityKeyValue = this.getEntityKeyValue(entity, entityKeys);
+
+        return entityKeyValue == id; // o "tipo" pode diferente, então usa "==" 
     },
 
     customGet(req, res, entityCfg, customRoute) {
         this.logRequest(`GET (${customRoute.name})`, req);
 
-        let database = dbUts.copyArray(entityCfg[customRoute.database]);
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
 
         let response = this.applyAllQueryFilters(database, req);
 
@@ -139,7 +165,7 @@ module.exports = {
             fileUts.saveFile(fileName, entityCfg);
         }
 
-        let database = dbUts.copyArray(entityCfg[customRoute.database]);
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
 
         let response = this.applyAllQueryFilters(database, req);
 
@@ -147,7 +173,7 @@ module.exports = {
     },
 
     applyAllQueryFilters(dbConfig, req) {
-        let database = dbUts.copyArray(dbConfig);
+        let database = genUts.copyArray(dbConfig);
 
         if (req.params) { database = dbUts.applyQueryFilter(database, req.params); }
 
@@ -169,7 +195,7 @@ module.exports = {
 
     makeCustomResponse(res, customRoute, response) {
         let statusCodeResponse = 200;
-        
+
         if (customRoute.responseType !== "array") {
             let database = response.items;
             database = database.length > 0 ? database[0] : {};

@@ -1,10 +1,5 @@
 module.exports = {
 
-    copyArray(list) {
-        if (!list) return [];
-        return JSON.parse(JSON.stringify(list));
-    },
-
     applyQueryFilter(list, query) {
         let filteredList = list;
 

@@ -2,7 +2,7 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
-const dbUts = require('../utils/db-utils.js');
+const genUts = require('../utils/generic-utils.js');
 
 const fileUts = require('../utils/file-utils.js');
 const methodCtrl = require('./method-control.js');
@@ -56,8 +56,8 @@ module.exports = {
 
             res.write('<style>');
             res.write(' table { font-family: sans-serif; border-collapse: collapse; }');
-            res.write(' th { font-size: 17px; border: 2px solid #000000; text-align: left; padding: 8px; }');
-            res.write(' td { font-size: 15px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+            res.write(' th { font-size: 15px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+            res.write(' td { font-size: 14px; border: 2px solid #000000; text-align: left; padding: 8px; }');
             //res.write(' tr:nth-child(even) { background-color: #EEE7DB; }');
             res.write(' tr:first-child { background-color: #dddddd; }');
             res.write(' tr:nth-child(2) { background-color: #dddddd; }');
@@ -68,13 +68,14 @@ module.exports = {
 
             res.write('<table>');
             res.write(' <tr>');
-            res.write('  <th colspan="3">Entidades</th>');
+            res.write('  <th colspan="4">Entidades</th>');
             res.write('  <th colspan="5">Rotas</th>');
             res.write(' </tr>');
             res.write(' <tr>');
             res.write('  <th>entityName</th>');
             res.write('  <th>entityLabel</th>');
             res.write('  <th>keys</th>');
+            res.write('  <th>base64Key</th>');
             res.write('  <th>Name</th>');
             res.write('  <th style="text-align: center">method</th>');
             res.write('  <th>path</th>');
@@ -84,7 +85,7 @@ module.exports = {
 
             entitiesData.forEach(entityData => {
                 const entityCfg = entityData.config;
-                const entityRoutes = dbUts.copyArray(entityData.config.customRoutes);
+                const entityRoutes = genUts.copyArray(entityData.config.customRoutes);
 
                 entityRoutes.unshift({
                     name: "CRUD",
@@ -98,6 +99,7 @@ module.exports = {
                 res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.entityName}</td>`);
                 res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.entityLabel || ''}</td>`);
                 res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.keys}</td>`);
+                res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.base64Key || false}</td>`);
 
                 entityRoutes.forEach((entityRoute, idx) => {
                     let dbRoute = entityCfg[entityRoute.database] || [];
