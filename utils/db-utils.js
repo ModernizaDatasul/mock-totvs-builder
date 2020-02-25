@@ -1,6 +1,7 @@
 module.exports = {
 
     copyArray(list) {
+        if (!list) return [];
         return JSON.parse(JSON.stringify(list));
     },
 
@@ -10,8 +11,10 @@ module.exports = {
         Object.keys(query).forEach((key) => {
             if (key !== 'pageSize' && key !== 'page' && key !== 'fields' && key !== 'order') {
                 filteredList = filteredList.filter((item) => {
-                    let queryValue = query[key] || '';
-                    let itemValue = item[key] || '';
+                    let queryValue = query[key];
+                    let itemValue = item[key];
+
+                    if (!itemValue) { return true; }
 
                     if (typeof queryValue === 'string') { queryValue = queryValue.toUpperCase(); }
                     if (typeof itemValue === 'string') { itemValue = itemValue.toUpperCase(); }

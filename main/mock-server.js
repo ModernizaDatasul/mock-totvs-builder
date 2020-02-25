@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
+const dbUts = require('../utils/db-utils.js');
 
 const fileUts = require('../utils/file-utils.js');
 const methodCtrl = require('./method-control.js');
@@ -38,68 +39,148 @@ module.exports = {
 
     createRouters(app, entitiesData) {
         // Index - Mostra todas a Entidades carregadas
+        this.makeIndexRoute(app, entitiesData);
+
+        // Configura as Rotas para cada Entidade
+        entitiesData.forEach(entityData => {
+            this.makeConfigRoute(app, entityData.config);
+            this.makeCustomRoute(app, entityData.fileName, entityData.config);
+            this.makeCRUDRoute(app, entityData.fileName, entityData.config);
+        });
+    },
+
+    makeIndexRoute(app, entitiesData) {
         app.get('/', function (req, res) {
             res.writeHead(200, { 'Content-Type': 'text/html' });
             res.write('<meta charset="utf-8">');
 
             res.write('<style>');
-            res.write('table { font-family: sans-serif; border-collapse: collapse; }');
-            res.write('th { font-size: 20px; border: 2px solid #000000; text-align: left; padding: 8px; }');
-            res.write('tr:first-child { background-color: #dddddd; }');
-            res.write('tr:nth-child(even) { background-color: #EEE7DB; }');
+            res.write(' table { font-family: sans-serif; border-collapse: collapse; }');
+            res.write(' th { font-size: 17px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+            res.write(' td { font-size: 15px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+            //res.write(' tr:nth-child(even) { background-color: #EEE7DB; }');
+            res.write(' tr:first-child { background-color: #dddddd; }');
+            res.write(' tr:nth-child(2) { background-color: #dddddd; }');
             res.write('</style>');
 
             res.write('<h1>MOCK TOTVS BUILDER - No Ar !!<h1>');
-            res.write('<h3>Entidades Configuradas<h3>');
+            res.write('<h3>Entidades Configuradas:<h3>');
+
             res.write('<table>');
-            res.write('<tr>');
-            res.write('<th>entityName</th>');
-            res.write('<th>entityLabel</th>');
-            res.write('<th>keys</th>');
-            res.write('<th style="text-align: center">database</th>');
-            res.write('</tr>');
+            res.write(' <tr>');
+            res.write('  <th colspan="3">Entidades</th>');
+            res.write('  <th colspan="5">Rotas</th>');
+            res.write(' </tr>');
+            res.write(' <tr>');
+            res.write('  <th>entityName</th>');
+            res.write('  <th>entityLabel</th>');
+            res.write('  <th>keys</th>');
+            res.write('  <th>Name</th>');
+            res.write('  <th style="text-align: center">method</th>');
+            res.write('  <th>path</th>');
+            res.write('  <th>responseType</th>');
+            res.write('  <th style="text-align: center">database</th>');
+            res.write(' </tr>');
 
             entitiesData.forEach(entityData => {
                 const entityCfg = entityData.config;
+                const entityRoutes = dbUts.copyArray(entityData.config.customRoutes);
 
-                res.write('<tr>');
-                res.write(`<th>${entityCfg.entityName}</th>`);
-                res.write(`<th>${entityCfg.entityLabel || ''}</th>`);
-                res.write(`<th>${entityCfg.keys}</th>`);
-                res.write(`<th style="text-align: center">` +
-                    `<a href="http://localhost:3000/${entityCfg.entityName}">[dados x${entityCfg.database.length}]</a></th>`);
-                res.write('</tr>');
+                entityRoutes.unshift({
+                    name: "CRUD",
+                    method: "get/post/put/delete",
+                    path: "",
+                    responseType: "object/array",
+                    database: "database"
+                });
+
+                res.write(' <tr>');
+                res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.entityName}</td>`);
+                res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.entityLabel || ''}</td>`);
+                res.write(`  <td rowspan="${entityRoutes.length}">${entityCfg.keys}</td>`);
+
+                entityRoutes.forEach((entityRoute, idx) => {
+                    let dbRoute = entityCfg[entityRoute.database] || [];
+
+                    if (idx != 0) {
+                        res.write(' <tr>');
+                    }
+                    res.write(`  <td>${entityRoute.name}</td>`);
+                    res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
+                    res.write(`  <td>/${entityCfg.entityName}${entityRoute.path}</td>`);
+                    res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
+                    res.write('  <td style="text-align: center">');
+                    res.write(`   <a href="http://localhost:3000/${entityCfg.entityName}/entityConfig?config=${entityRoute.database}">`);
+                    res.write(`    [${entityRoute.database} x${dbRoute.length}]`);
+                    res.write('   </a>');
+                    res.write('  </td>');
+                    if (idx !== entityRoutes.length - 1) {
+                        res.write(' </tr>');
+                    }
+                });
+
+                res.write(' </tr>');
             });
 
             res.write('</table>');
+
             res.end();
         });
+    },
 
-        // Configura as Rotas para cada Entidade
-        entitiesData.forEach(entityData => {
-            const fileName = entityData.fileName;
-            const entityCfg = entityData.config;
-            const entityPath = "/" + entityCfg.entityName;
+    makeConfigRoute(app, entityCfg) {
+        const configPath = `/${entityCfg.entityName}/entityConfig`;
 
-            app.get(entityPath, function (req, res) {
-                return methodCtrl.query(req, res, entityCfg);
-            });
+        app.get(configPath, function (req, res) {
+            return methodCtrl.entityConfig(req, res, entityCfg);
+        });
+    },
 
-            app.get(entityPath + '/:id', function (req, res) {
-                return methodCtrl.get(req, res, entityCfg);
-            });
+    makeCRUDRoute(app, fileName, entityCfg) {
+        const entityPath = "/" + entityCfg.entityName;
 
-            app.post(entityPath, function (req, res) {
-                return methodCtrl.create(req, res, entityCfg, fileName);
-            });
+        app.get(entityPath, function (req, res) {
+            return methodCtrl.query(req, res, entityCfg);
+        });
 
-            app.put(entityPath + '/:id', function (req, res) {
-                return methodCtrl.update(req, res, entityCfg, fileName);
-            });
+        app.get(entityPath + '/:id', function (req, res) {
+            return methodCtrl.get(req, res, entityCfg);
+        });
 
-            app.delete(entityPath + '/:id', function (req, res) {
-                return methodCtrl.delete(req, res, entityCfg, fileName);
-            });
+        app.post(entityPath, function (req, res) {
+            return methodCtrl.create(req, res, entityCfg, fileName);
+        });
+
+        app.put(entityPath + '/:id', function (req, res) {
+            return methodCtrl.update(req, res, entityCfg, fileName);
+        });
+
+        app.delete(entityPath + '/:id', function (req, res) {
+            return methodCtrl.delete(req, res, entityCfg, fileName);
+        });
+    },
+
+    makeCustomRoute(app, fileName, entityCfg) {
+        if (!entityCfg.customRoutes) { return; }
+        if (entityCfg.customRoutes.length === 0) { return; }
+
+        entityCfg.customRoutes.forEach(customRoute => {
+            const customPath = `/${entityCfg.entityName}${customRoute.path}`;
+            
+            switch (customRoute.method.toUpperCase()) {
+                case 'GET':
+                    app.get(customPath, function (req, res) {
+                        return methodCtrl.customGet(req, res, entityCfg, customRoute);
+                    });
+                    break;
+                case 'POST':
+                    app.post(customPath, function (req, res) {
+                        return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
+                    });
+                    break;
+                default:
+                    console.log('customRoutes: Método Inválido -', customRoute.method);
+            }
         });
     }
 }

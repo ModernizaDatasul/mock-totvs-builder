@@ -4,7 +4,7 @@
   "description": "",
   "main": "main/mock-server.js",
   "scripts": {
-    "dev": "nodemon start-mock.js"
+    "start": "nodemon start-mock.js"
   },
   "author": "",
   "license": "ISC",

@@ -3,27 +3,23 @@ const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
 
+    entityConfig(req, res, entityCfg) {
+        this.logRequest('GET (entityCfg)', req);
+
+        let response = entityCfg;
+
+        if (req.query && req.query.config) {
+            response = {};
+            response[req.query.config] = entityCfg[req.query.config];
+        }
+
+        return res.json(response);
+    },
+
     query(req, res, entityCfg) {
         this.logRequest('GET (query)', req);
 
-        let database = dbUts.copyArray(entityCfg.database);
-
-        const { pageSize = 20, page = 1, order, fields } = req.query;
-        const queries = req.query;
-
-        if (queries) { database = dbUts.applyQueryFilter(database, queries); }
-
-        const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);
-
-        if (fields) { dbUts.applyFields(entitiesResponse, fields); }
-
-        if (order) { dbUts.applyOrder(entitiesResponse, order); }
-
-        const response = {
-            items: entitiesResponse,
-            hasNext: database.length > (page * pageSize),
-            total: entitiesResponse.length
-        }
+        let response = this.applyAllQueryFilters(entityCfg.database, req);
 
         return res.json(response);
     },
@@ -123,6 +119,71 @@ module.exports = {
             return entity[entityKey].toUpperCase() === id.toUpperCase();
         }
         return entity[entityKey] == id; // o "tipo" pode diferente, então usa "==" 
+    },
+
+    customGet(req, res, entityCfg, customRoute) {
+        this.logRequest(`GET (${customRoute.name})`, req);
+
+        let database = dbUts.copyArray(entityCfg[customRoute.database]);
+
+        let response = this.applyAllQueryFilters(database, req);
+
+        return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    customPost(req, res, entityCfg, fileName, customRoute) {
+        this.logRequest(`POST (${customRoute.name})`, req);
+
+        if (req.body && Object.keys(req.body).length > 0) {
+            entityCfg[customRoute.database].push(req.body);
+            fileUts.saveFile(fileName, entityCfg);
+        }
+
+        let database = dbUts.copyArray(entityCfg[customRoute.database]);
+
+        let response = this.applyAllQueryFilters(database, req);
+
+        return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    applyAllQueryFilters(dbConfig, req) {
+        let database = dbUts.copyArray(dbConfig);
+
+        if (req.params) { database = dbUts.applyQueryFilter(database, req.params); }
+
+        if (req.query) { database = dbUts.applyQueryFilter(database, req.query); }
+
+        const { pageSize = 20, page = 1, order, fields } = req.query;
+        const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);
+
+        if (fields) { dbUts.applyFields(entitiesResponse, fields); }
+
+        if (order) { dbUts.applyOrder(entitiesResponse, order); }
+
+        return {
+            items: entitiesResponse,
+            hasNext: database.length > (page * pageSize),
+            total: entitiesResponse.length
+        }
+    },
+
+    makeCustomResponse(res, customRoute, response) {
+        let statusCodeResponse = 200;
+        
+        if (customRoute.responseType !== "array") {
+            let database = response.items;
+            database = database.length > 0 ? database[0] : {};
+
+            statusCodeResponse = (database['statusCodeResponse']) || 200;
+
+            if (database['errorResponse']) {
+                response = this.errorBuilder(statusCodeResponse, database['errorResponse']);
+            } else {
+                response = database;
+            }
+        }
+
+        return res.status(statusCodeResponse).json(response);
     },
 
     logRequest(method, req) {
