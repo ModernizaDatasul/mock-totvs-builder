@@ -52,14 +52,14 @@ Segue abaixo a lista de Rotas Pré-definidas para manipulação das Entidades.
 |--|--|--|
 |**GET (query)**|Retorna todos os registros da entidade, respeitando os parâmetros definidos como Busca Avançada. Veja detalhes no tópico **Busca Avançada**.|```GET /customer```|
 |**GET**|Retorna um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornado uma mensagem de erro.|```GET /customer/7```|
-|**POST (create)**|Cria um novo registro. Os dados da entidade devem ser enviados no **Payload**. Caso já exista um registro com a chave da entidade, será retornado uma mensagem de erro.|```POST /customer```|
-|**PUT (update)**|Altera um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). E, no **Payload** os dados que devem ser alterados. Caso o registro não exista, será retornado uma mensagem de erro.|```PUT /customer/2```|
+|**POST (create)**|Cria um novo registro. Os dados da entidade devem ser enviados no **Payload**. Caso já exista um registro com a chave da entidade, será retornado uma mensagem de erro.|```POST /customer```<br>Payload:<br>```{ "code": 2, "shortName": "Maria", "name": "Maria Barbosa" }```|
+|**PUT (update)**|Altera um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). E, no **Payload** os dados que devem ser alterados. Caso o registro não exista, será retornado uma mensagem de erro.|```PUT /customer/2```<br>Payload:<br>```{ "name": "Maria Barbosa da Silva" }```|
 |**DELETE**|Elimina um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornado uma mensagem de erro.|```DELETE /customer/10```|  
 
 **Observações:**
 
 - A busca (get/query) será realizada sobre os Registros existentes no parâmetro **"database"** do arquivo de configuração de entidade; 
-- Sempre que a entidade for manipulada (inclusão/alteração/exclusão), as alterações serão salvas no parâmetro **"database"** do arquivo de configuração de entidade.
+- Sempre que a entidade for manipulada (inclusão/alteração/exclusão), as alterações serão salvas no parâmetro **"database"** do arquivo de configuração de entidade;
 - Todas as buscas realizadas não são case sensitive.
 
 **Busca Avançada**
@@ -72,8 +72,8 @@ Ao fazer uma requisição, permite enviar **QueryParams** pré-definidos para fi
 |**Filtro (Simples)**<br>(atributo=valor)|Possibilita realizar filtros utilizando todos os atributos existentes na entidade. O valor poderá ser uma informação qualquer, que seja do mesmo tipo de dado do atributo. Caso o tipo de dado seja string, a busca não será pelo valor exato, ela ir considerar que o atributo contenha esta valor.|```/customer?name=João```|
 |**Filtro (Range)**<br>(atributo=valIni;ValFim)|Realiza o filtro considerando uma faixa. Neste caso, os valores inicial e final, devem ser enviados com o separador **";"**.|```/customer?code=2;5```|
 |**Filtro (Lista)**<br>(atributo=val1,val2,valN)|Realiza o filtro considerando uma lista. Neste caso, os valores devem ser enviados com o separador **","**.|```/customer?country=BRA,USA,ARG```|
-|**Seleção de Atributo**<br>(fields)|Permite indicar quais atributos da entidade devem ser retornados. Para isto, deve ser enviando o **QueryParam** **"fields"** com a lista de atributos.|```/customer?fields=code,name```|
-|**Ordenação**<br>(order)|Permite indicar um atributo para realizar a ordenação dos dados retornados. Para isto, deve ser enviando o **QueryParam** **"order"** com o nome do atributo. Utilizar o caracter **'-'** na frente do atributo para indicar que a ordenação seja descendente.|```/customer?&order=name```|
+|**Seleção de Atributos**<br>(fields)|Permite indicar quais atributos da entidade devem ser retornados. Para isto, deve ser enviando o **QueryParam** **"fields"** com a lista de atributos. Caso não seja enviado, retorna todos os atributos da entidade.|```/customer?fields=code,name```|
+|**Ordenação**<br>(order)|Permite indicar um atributo para realizar a ordenação dos dados retornados. Para isto, deve ser enviando o **QueryParam** **"order"** com o nome do atributo. Utilizar o caracter **'-'** na frente do atributo para indicar que a ordenação seja descendente. Caso não seja enviado, os dados serão retornados na ordem em que estiver no arquivo de configuração da entidade.|```/customer?order=name```|
 
 # Configurando Rotas Customizadas
 Quando as rotas padrões pré-definidas não atendem, é possível configurar novas rotas. Para isto, basta incluir o parâmetro **"customRoutes"** no arquivo de configuração da Entidade e incluir a lista de rotas. Cada rota, deve respeitar a configuração conforme tabela abaixo:
@@ -91,7 +91,7 @@ Para as rotas customizadas que possuem o **responseType** igual a **"object"**, 
 |Atributo|Descrição|Exemplos|
 |--|--|--|
 |statusCodeResponse|Permite informar o Status Code do response. Se não informado, será considerado **200**.|```"statusCodeResponse": 400```|
-|errorResponse|Mensagem de erro retornada no Response. Ela estará no formato de Erro padrão TOTVS.|```"errorResponse": "Não foi possível bloquear o cliente 3 !"```|
+|errorResponse|Mensagem de erro retornada no Response. A mensagem será retornada no formato de Erro padrão TOTVS.|```"errorResponse": "Não foi possível bloquear o cliente 3 !"```|
 
 **Exemplo da Configuração de Rotas Customizadas**
 
@@ -147,10 +147,10 @@ No exemplo abaixo temos duas rotas customizadas:
 - O projeto está disponível em:<br>https://github.com/ModernizaDatasul/mock-totvs-builder-client/
 
 # Implementações Futuras
-- Validate Custom
+- Custom Validation
 - Validador do Arquivo de Configuração
-- QueryParam Custom (de-param query-param x atrib-entity, ou cria este atrib na entity)
-- ID auto incrementado
+- Custom QueryParam (de-param query-param x atrib-entity, ou cria este atrib na entity)
+- Atributo auto incrementado
 - Variáveis no arquivo de configuração (ex: #today#)
-- File Custom (lógica customizada)
-
+- Custom File (lógica customizada)
+- Edição Entitidade Config via html

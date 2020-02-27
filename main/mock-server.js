@@ -75,7 +75,7 @@ module.exports = {
             res.write('  <th>entityName</th>');
             res.write('  <th>entityLabel</th>');
             res.write('  <th>keys</th>');
-            res.write('  <th>base64Key</th>');
+            res.write('  <th>b64Key</th>');
             res.write('  <th>Name</th>');
             res.write('  <th style="text-align: center">method</th>');
             res.write('  <th>path</th>');
@@ -103,6 +103,7 @@ module.exports = {
 
                 entityRoutes.forEach((entityRoute, idx) => {
                     let dbRoute = entityCfg[entityRoute.database] || [];
+                    let queryParam = `config=${entityRoute.database}&tableView=yes`;
 
                     if (idx != 0) {
                         res.write(' <tr>');
@@ -112,7 +113,7 @@ module.exports = {
                     res.write(`  <td>/${entityCfg.entityName}${entityRoute.path}</td>`);
                     res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
                     res.write('  <td style="text-align: center">');
-                    res.write(`   <a href="http://localhost:3000/${entityCfg.entityName}/entityConfig?config=${entityRoute.database}">`);
+                    res.write(`   <a href="http://localhost:3000/${entityCfg.entityName}/entityConfig?${queryParam}">`);
                     res.write(`    [${entityRoute.database} x${dbRoute.length}]`);
                     res.write('   </a>');
                     res.write('  </td>');

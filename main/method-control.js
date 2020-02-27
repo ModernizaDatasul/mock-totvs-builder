@@ -9,9 +9,16 @@ module.exports = {
 
         let response = entityCfg;
 
-        if (req.query && req.query.config) {
+        const configParam = req.query.config;
+
+        if (req.query && configParam) {
             response = {};
-            response[req.query.config] = entityCfg[req.query.config];
+            if (req.query.tableView) {
+                this.tableView(res, entityCfg.entityName, configParam, entityCfg[configParam]);
+                return;
+            } else {
+                response[configParam] = entityCfg[configParam];
+            }
         }
 
         return res.json(response);
@@ -210,6 +217,69 @@ module.exports = {
         }
 
         return res.status(statusCodeResponse).json(response);
+    },
+
+    tableView(res, entityName, configParam, configParamValue) {
+        if (typeof configParamValue !== 'object') {
+            let newObj = {};
+            newObj[configParam] = configParamValue;
+            configParamValue = newObj;
+        }
+
+        if (!Array.isArray(configParamValue)) { configParamValue = [configParamValue]; }
+
+        let header = [];
+        configParamValue.forEach((value, idx) => {
+            if (typeof value !== 'object') {
+                let newObj = {};
+                newObj[configParam] = value;
+                value = newObj;
+                configParamValue[idx] = value;
+            }
+            header = header.concat(Object.keys(value).filter(key => header.indexOf(key) < 0));
+        });
+
+        let lines = [];
+        configParamValue.forEach(value => {
+            let reg = [];
+            header.forEach((key) => {
+                reg.push(value[key]);
+            });
+            lines.push(reg);
+        });
+
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.write('<meta charset="utf-8">');
+
+        res.write('<style>');
+        res.write(' table { font-family: sans-serif; border-collapse: collapse; }');
+        res.write(' th { font-size: 15px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+        res.write(' td { font-size: 14px; border: 2px solid #000000; text-align: left; padding: 8px; }');
+        res.write(' tr:nth-child(even) { background-color: #EEE7DB; }');
+        res.write(' tr:first-child { background-color: #dddddd; }');
+        res.write('</style>');
+
+        res.write(`<h2>Entidade: ${entityName}<h2>`);
+        res.write(`<h3>Parâmetro: ${configParam}<h3>`);
+        res.write('<table>');
+
+        res.write(' <tr>');
+        header.forEach(title => {
+            res.write(`  <th>${title}</th>`);
+        });
+        res.write(' </tr>');
+
+        lines.forEach(line => {
+            res.write(' <tr>');
+            line.forEach(reg => {
+                if (typeof reg === 'object') { reg = JSON.stringify(reg) };
+                res.write(`  <td>${(reg === undefined) ? '' : reg}</td>`);
+            });
+            res.write(' </tr>');
+        });
+
+        res.write('</table>');
+        res.end();
     },
 
     logRequest(method, req) {
