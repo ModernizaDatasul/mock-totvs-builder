@@ -153,4 +153,4 @@ No exemplo abaixo temos duas rotas customizadas:
 - Atributo auto incrementado
 - Variáveis no arquivo de configuração (ex: #today#)
 - Custom File (lógica customizada)
-- Edição Entitidade Config via html
+- Edição Entitidade Config via html.
