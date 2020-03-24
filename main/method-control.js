@@ -4,28 +4,11 @@ const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
 
-    entityConfig(req, res, entityCfg) {
-        this.logRequest('GET (entityCfg)', req);
-
-        let response = entityCfg;
-
-        const configParam = req.query.config;
-
-        if (req.query && configParam) {
-            response = {};
-            if (req.query.tableView) {
-                this.tableView(res, entityCfg.entityName, configParam, entityCfg[configParam]);
-                return;
-            } else {
-                response[configParam] = entityCfg[configParam];
-            }
-        }
-
-        return res.json(response);
-    },
-
     query(req, res, entityCfg) {
         this.logRequest('GET (query)', req);
+
+        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        if (customVld) { return customVld; };
 
         let response = this.applyAllQueryFilters(entityCfg.database, req);
 
@@ -35,18 +18,24 @@ module.exports = {
     get(req, res, entityCfg) {
         this.logRequest('GET', req);
 
-        let id = req.params.id;
-        if (entityCfg.base64Key) { id = genUts.atob(id); }
+        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
+        let entityId = req.params.id;
+
+        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        if (customVld) { return customVld; };
 
         const entityResponse = entityCfg.database.find((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, id);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
         });
 
         if (!entityResponse) {
             return res.status(400).json(
-                { error: `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}` }
+                { error: `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${entityId}.` }
             );
         }
+
+        customVld = this.customValidationDatabase('GET', entityResponse, res, entityCfg);
+        if (customVld) { return customVld; };
 
         return res.json(entityResponse);
     },
@@ -57,15 +46,21 @@ module.exports = {
         const entityDB = entityCfg.database;
         const newEntity = req.body;
 
-        const id = this.getEntityKeyValue(newEntity, entityCfg.keys);
+        const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys);
+        if (!req.params) req["params"] = {};
+        req.params["id"] = entityId;
+
+        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        if (customVld) { return customVld; };
 
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, id);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
         });
 
         if (index !== -1) {
             return res.status(400).json(
-                this.errorBuilder(400, `Já existe ${entityCfg.entityLabel || entityCfg.entityName} com o código ${id}`)
+                this.errorBuilderReturn([this.errorBuilder(400,
+                    `Já existe ${entityCfg.entityLabel || entityCfg.entityName} com o código ${entityId}.`)])
             );
         }
 
@@ -79,19 +74,26 @@ module.exports = {
     update(req, res, entityCfg, fileName) {
         this.logRequest('PUT (update)', req);
 
-        let id = req.params.id;
-        if (entityCfg.base64Key) { id = genUts.atob(id); }
+        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
+        let entityId = req.params.id;
+
+        let customVld = this.customValidationParams('PUT', req, res, entityCfg);
+        if (customVld) { return customVld; };
 
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, id);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
         });
 
         if (index === -1) {
             return res.status(400).json(
-                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}`)
+                this.errorBuilderReturn([this.errorBuilder(400,
+                    `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${entityId}.`)])
             );
         }
+
+        customVld = this.customValidationDatabase('PUT', entityDB[index], res, entityCfg);
+        if (customVld) { return customVld; };
 
         Object.keys(req.body).forEach((property) => {
             if (!entityCfg.keys.includes(property)) {
@@ -107,19 +109,26 @@ module.exports = {
     delete(req, res, entityCfg, fileName) {
         this.logRequest('DELETE', req);
 
-        let id = req.params.id;
-        if (entityCfg.base64Key) { id = genUts.atob(id); }
+        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
+        let entityId = req.params.id;
+
+        let customVld = this.customValidationParams('DELETE', req, res, entityCfg);
+        if (customVld) { return customVld; };
 
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, id);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
         });
 
         if (index === -1) {
             return res.status(400).json(
-                this.errorBuilder(400, `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${id}`)
+                this.errorBuilderReturn([this.errorBuilder(400,
+                    `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${entityId}.`)])
             );
         }
+
+        customVld = this.customValidationDatabase('DELETE', entityDB[index], res, entityCfg);
+        if (customVld) { return customVld; };
 
         entityDB.splice(index, 1);
 
@@ -128,6 +137,169 @@ module.exports = {
         return res.json({
             message: `${entityCfg.entityLabel || entityCfg.entityName} removido com sucesso !`
         });
+    },
+
+    customGet(req, res, entityCfg, customRoute) {
+        this.logRequest(`GET (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
+        let response = this.applyAllQueryFilters(database, req);
+
+        customVld = this.customValidationDatabase('GET', response.items, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    customPost(req, res, entityCfg, fileName, customRoute) {
+        this.logRequest(`POST (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
+        let response = this.applyAllQueryFilters(database, req);
+
+        if (req.body && Object.keys(req.body).length > 0) {
+            entityCfg[customRoute.database].push(req.body);
+            fileUts.saveFile(fileName, entityCfg);
+        } else {
+            customVld = this.customValidationDatabase('POST', response.items, res, entityCfg);
+            if (customVld) { return customVld; };
+        }
+
+        return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    customValidationParams(method, req, res, entityCfg) {
+        if (!entityCfg.customValidation || entityCfg.customValidation.length === 0) {
+            return null;
+        }
+
+        if (!req.params && !req.query && !req.body) {
+            return null;
+        }
+
+        let errorList = [];
+        let errorCustVld = null;
+
+        entityCfg.customValidation.forEach(custVld => {
+            let vldMethod = (!custVld.method || custVld.method.length === 0 || custVld.method.includes(method));
+            let vldPathParam = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('pathParam'));
+            let vldQueryParam = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('queryParam'));
+            let vldPayload = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('payload'));
+
+            if (vldMethod) {
+                if (vldPathParam && req.params) {
+                    errorCustVld = this.executeCustomValidation(req.params, custVld);
+                    if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
+                }
+
+                if (vldQueryParam && req.query) {
+                    errorCustVld = this.executeCustomValidation(req.query, custVld);
+                    if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
+                }
+
+                if (vldPayload && req.body) {
+                    errorCustVld = this.executeCustomValidation(req.body, custVld);
+                    if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
+                }
+            }
+        });
+
+        if (errorList.length > 0) {
+            return res.status(400).json(this.errorBuilderReturn(errorList));
+        }
+
+        return null;
+    },
+
+    customValidationDatabase(method, database, res, entityCfg) {
+        if (!entityCfg.customValidation || entityCfg.customValidation.length === 0) {
+            return null;
+        }
+
+        if (!database) { database = []; }
+        if (!Array.isArray(database)) { database = [database]; }
+
+        if (database.length === 0) {
+            return null;
+        }
+
+        let errorList = [];
+        let errorCustVld = null;
+
+        entityCfg.customValidation.forEach(custVld => {
+            let vldMethod = (!custVld.method || custVld.method.length === 0 || custVld.method.includes(method));
+            let vldDatabase = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('database'));
+
+            if (vldMethod && vldDatabase) {
+                database.forEach(item => {
+                    errorCustVld = this.executeCustomValidation(item, custVld);
+                    if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
+                });
+            }
+        });
+
+        if (errorList.length > 0) {
+            return res.status(400).json(this.errorBuilderReturn(errorList));
+        }
+
+        return null;
+    },
+
+    executeCustomValidation(param, custVld) {
+        let errorCustVld = [];
+
+        if (custVld.operation === "required") {
+            custVld.field.forEach(vldField => {
+                if (custVld.value === "false") {
+                    if (param[vldField]) { errorCustVld.push(this.makeCustomValidError(custVld, vldField)); }
+                } else {
+                    if (!param[vldField]) { errorCustVld.push(this.makeCustomValidError(custVld, vldField)); }
+                }
+            });
+        } else {
+            Object.keys(param).forEach((property) => {
+                if (custVld.field.includes(property)) {
+                    let paramValue = param[property];
+                    let custValue = custVld.value;
+
+                    if (typeof paramValue === 'string') { paramValue = paramValue.toUpperCase(); }
+                    if (typeof custValue === 'string') { custValue = custValue.toUpperCase(); }
+
+                    let custVldError = false;
+
+                    if (custVld.operation === "=" && paramValue == custValue) { custVldError = true; }
+                    if (custVld.operation === "!=" && paramValue != custValue) { custVldError = true; }
+                    if (custVld.operation === ">" && paramValue > custValue) { custVldError = true; }
+                    if (custVld.operation === ">=" && paramValue >= custValue) { custVldError = true; }
+                    if (custVld.operation === "<" && paramValue < custValue) { custVldError = true; }
+                    if (custVld.operation === "<=" && paramValue <= custValue) { custVldError = true; }
+                    if (typeof paramValue === 'string') {
+                        if (custVld.operation === "begins" && paramValue.startsWith(custValue)) { custVldError = true; }
+                        if (custVld.operation === "!begins" && !paramValue.startsWith(custValue)) { custVldError = true; }
+                        if (custVld.operation === "contains" && paramValue.includes(custValue)) { custVldError = true; }
+                        if (custVld.operation === "!contains" && !paramValue.includes(custValue)) { custVldError = true; }
+                    }
+
+                    if (custVldError) { errorCustVld.push(this.makeCustomValidError(custVld, property)); }
+                }
+            });
+        }
+
+        if (errorCustVld.length === 0) {
+            return null;
+        }
+        return errorCustVld;
+    },
+
+    makeCustomValidError(custVld, field) {
+        return this.errorBuilder(400, `${custVld.msgError} (${field}).`, 
+            `${custVld.msgError} (${field}). customValidation: ${custVld.name}.`);
     },
 
     getEntityKeyValue(entity, entityKeys) {
@@ -152,31 +324,6 @@ module.exports = {
         const entityKeyValue = this.getEntityKeyValue(entity, entityKeys);
 
         return entityKeyValue == id; // o "tipo" pode diferente, então usa "==" 
-    },
-
-    customGet(req, res, entityCfg, customRoute) {
-        this.logRequest(`GET (${customRoute.name})`, req);
-
-        let database = genUts.copyArray(entityCfg[customRoute.database]);
-
-        let response = this.applyAllQueryFilters(database, req);
-
-        return this.makeCustomResponse(res, customRoute, response);
-    },
-
-    customPost(req, res, entityCfg, fileName, customRoute) {
-        this.logRequest(`POST (${customRoute.name})`, req);
-
-        if (req.body && Object.keys(req.body).length > 0) {
-            entityCfg[customRoute.database].push(req.body);
-            fileUts.saveFile(fileName, entityCfg);
-        }
-
-        let database = genUts.copyArray(entityCfg[customRoute.database]);
-
-        let response = this.applyAllQueryFilters(database, req);
-
-        return this.makeCustomResponse(res, customRoute, response);
     },
 
     applyAllQueryFilters(dbConfig, req) {
@@ -210,76 +357,14 @@ module.exports = {
             statusCodeResponse = (database['statusCodeResponse']) || 200;
 
             if (database['errorResponse']) {
-                response = this.errorBuilder(statusCodeResponse, database['errorResponse']);
+                response = this.errorBuilderReturn([this.errorBuilder(statusCodeResponse, database['errorResponse'])]);
+
             } else {
                 response = database;
             }
         }
 
         return res.status(statusCodeResponse).json(response);
-    },
-
-    tableView(res, entityName, configParam, configParamValue) {
-        if (typeof configParamValue !== 'object') {
-            let newObj = {};
-            newObj[configParam] = configParamValue;
-            configParamValue = newObj;
-        }
-
-        if (!Array.isArray(configParamValue)) { configParamValue = [configParamValue]; }
-
-        let header = [];
-        configParamValue.forEach((value, idx) => {
-            if (typeof value !== 'object') {
-                let newObj = {};
-                newObj[configParam] = value;
-                value = newObj;
-                configParamValue[idx] = value;
-            }
-            header = header.concat(Object.keys(value).filter(key => header.indexOf(key) < 0));
-        });
-
-        let lines = [];
-        configParamValue.forEach(value => {
-            let reg = [];
-            header.forEach((key) => {
-                reg.push(value[key]);
-            });
-            lines.push(reg);
-        });
-
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.write('<meta charset="utf-8">');
-
-        res.write('<style>');
-        res.write(' table { font-family: sans-serif; border-collapse: collapse; }');
-        res.write(' th { font-size: 15px; border: 2px solid #000000; text-align: left; padding: 8px; }');
-        res.write(' td { font-size: 14px; border: 2px solid #000000; text-align: left; padding: 8px; }');
-        res.write(' tr:nth-child(even) { background-color: #EEE7DB; }');
-        res.write(' tr:first-child { background-color: #dddddd; }');
-        res.write('</style>');
-
-        res.write(`<h2>Entidade: ${entityName}<h2>`);
-        res.write(`<h3>Parâmetro: ${configParam}<h3>`);
-        res.write('<table>');
-
-        res.write(' <tr>');
-        header.forEach(title => {
-            res.write(`  <th>${title}</th>`);
-        });
-        res.write(' </tr>');
-
-        lines.forEach(line => {
-            res.write(' <tr>');
-            line.forEach(reg => {
-                if (typeof reg === 'object') { reg = JSON.stringify(reg) };
-                res.write(`  <td>${(reg === undefined) ? '' : reg}</td>`);
-            });
-            res.write(' </tr>');
-        });
-
-        res.write('</table>');
-        res.end();
     },
 
     logRequest(method, req) {
@@ -291,11 +376,28 @@ module.exports = {
         );
     },
 
-    errorBuilder(cod, msg) {
+    errorBuilder(cod, msg, help = null) {
         return {
             code: cod,
             message: msg,
-            detailedMessage: msg
+            detailedMessage: help || msg
         }
+    },
+
+    errorBuilderReturn(errorList) {
+        let errorReturn;
+        let errorDetails;
+
+        if (errorList.length === 1) {
+            errorReturn = errorList[0];
+            errorDetails = null;
+        } else {
+            errorReturn = this.errorBuilder(400, "Ocorreram vários erros, verifique os detalhes.");
+            errorDetails = errorList;
+        }
+
+        if (errorDetails) { errorReturn["details"] = errorDetails; }
+
+        return errorReturn;
     }
 }
