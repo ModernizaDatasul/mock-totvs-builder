@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 module.exports = {
 
@@ -6,7 +7,7 @@ module.exports = {
         const files = fs.readdirSync(directoryPath);
         const filesReturn = [];
         files.forEach((file) => {
-            filesReturn.push(directoryPath.concat("\\").concat(file));
+            filesReturn.push(path.join(directoryPath, file));
         });
         return filesReturn;
     },
