@@ -14,6 +14,8 @@ module.exports = {
                     if (typeof queryValue === 'string') { queryValue = queryValue.toUpperCase(); }
                     if (typeof itemValue === 'string') { itemValue = itemValue.toUpperCase(); }
 
+                    if (queryValue === 'ALL') { return true; }
+
                     if (typeof queryValue === 'string') {
 
                         // QueryParam do tipo Range
@@ -25,19 +27,18 @@ module.exports = {
 
                         // QueryParam do tipo List
                         if (queryValue.indexOf(",") !== -1) {
-                            let queValueList = queryValue.split(",");
-                            return queValueList.indexOf(itemValue) !== -1;
+                            let queryValueList = queryValue.split(",");
+                            return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
                         }
                     }
 
                     if (typeof itemValue === 'string') {
-                        if (queryValue === 'ALL') { return true; }
                         return itemValue.includes(queryValue);
                     }
 
                     if (typeof itemValue === 'boolean') {
-                        if (itemValue && queryValue === "TRUE") { return true; }
-                        if (!itemValue && queryValue === "FALSE") { return true; }
+                        if (itemValue && queryValue === 'TRUE') { return true; }
+                        if (!itemValue && queryValue === 'FALSE') { return true; }
                         if (itemValue && (!queryValue)) { return true; }
                         return false;
                     }
