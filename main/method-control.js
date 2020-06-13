@@ -174,6 +174,25 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, response);
     },
 
+    customUploadPost(req, res, entityCfg, fileName, customRoute) {
+        this.logRequest(`POST (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let uploadFile = {
+            originalName: req.file.originalname,
+            size: req.file.size,
+            destination: req.file.destination,
+            fileName: req.file.filename
+        }
+
+        entityCfg[customRoute.database].push(uploadFile);
+        fileUts.saveFile(fileName, entityCfg);
+
+        return this.makeCustomResponse(res, customRoute, { items: [uploadFile] });
+    },
+
     customValidationParams(method, req, res, entityCfg) {
         if (!entityCfg.customValidation || entityCfg.customValidation.length === 0) {
             return null;
@@ -298,7 +317,7 @@ module.exports = {
     },
 
     makeCustomValidError(custVld, field) {
-        return this.errorBuilder(400, `${custVld.msgError} (${field}).`, 
+        return this.errorBuilder(400, `${custVld.msgError} (${field}).`,
             `${custVld.msgError} (${field}). customValidation: ${custVld.name}.`);
     },
 

@@ -4,13 +4,15 @@
   "description": "",
   "main": "main/mock-server.js",
   "scripts": {
-    "start": "nodemon start-mock.js"
+    "start": "nodemon start-mock.js",
+    "publish-mock": "npm publish"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "multer": "^1.4.2"
   },
   "devDependencies": {
     "nodemon": "^1.19.3"

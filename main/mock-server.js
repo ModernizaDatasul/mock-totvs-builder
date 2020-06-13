@@ -1,10 +1,11 @@
 const express = require('express');
+const multer = require('multer');
 const http = require('http');
 const cors = require('cors');
 const path = require('path');
 
 const methodCtrl = require('./method-control.js');
-const indexView = require('./index-view.js'); 
+const indexView = require('./index-view.js');
 const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
@@ -15,10 +16,12 @@ module.exports = {
         app.use(express.json());
 
         const dataFile = this.readDataFile(path.join(projRootDir, 'data'));
+
+        if (!this.validEntitiesData(dataFile)) { return null; }
+        this.ajustEntitiesData(dataFile);
         this.createRouters(app, dataFile);
 
         const server = http.Server(app);
-
         return server;
     },
 
@@ -35,6 +38,26 @@ module.exports = {
         });
 
         return entitiesData;
+    },
+
+    validEntitiesData(entitiesData) {
+
+        // Em desenvolvimento - Fazer a validação os arquivos
+
+        return true;
+    },
+
+    ajustEntitiesData(entitiesData) {
+        entitiesData.forEach(entityData => {
+            let entityCfg = entityData.config;
+
+            // Seta o "database" para as rotas que não tem informado
+            if (entityCfg.customRoutes) {
+                entityCfg.customRoutes.forEach(customRoute => {
+                    if (!customRoute.database) { customRoute.database = "database"; }
+                });
+            };
+        });
     },
 
     createRouters(app, entitiesData) {
@@ -92,13 +115,57 @@ module.exports = {
                     });
                     break;
                 case 'POST':
-                    app.post(customPath, function (req, res) {
-                        return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
-                    });
+                    if (customRoute.uploadFile) {
+                        const upload = this.makeUploadConfig(customRoute.uploadFile);
+
+                        app.post(customPath, upload.single('files'), function (req, res) {
+                            return methodCtrl.customUploadPost(req, res, entityCfg, fileName, customRoute);
+                        });
+                    } else {
+                        app.post(customPath, function (req, res) {
+                            return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
+                        });
+                    }
                     break;
                 default:
                     console.log('customRoutes: Método Inválido -', customRoute.method);
             }
         });
+    },
+
+    makeUploadConfig(uploadFileCfg) {
+        const storage = multer.diskStorage({
+            destination: function (req, file, cb) {
+                cb(null, uploadFileCfg.dirDestination);
+            },
+            filename: function (req, file, cb) {
+                let fileName = file.originalname;
+
+                if (uploadFileCfg.fileName) {
+                    let extName = path.extname(file.originalname);
+
+                    fileName = uploadFileCfg.fileName;
+                    fileName = fileName.replace("#file#", file.originalname.replace(extName, ''));
+                    fileName = fileName.replace("#now#", Date.now().toString());
+
+                    let dtToday = new Date();
+                    let sDay = dtToday.getDate() < 10 ? `0${dtToday.getDate()}` : `${dtToday.getDate()}`;
+                    let sMonth = dtToday.getMonth() < 9 ? `0${dtToday.getMonth() + 1}` : `${dtToday.getMonth() + 1}`;
+                    fileName = fileName.replace("#today#", `${dtToday.getFullYear()}-${sMonth}-${sDay}`);
+
+                    if (req.params) {
+                        Object.keys(req.params).forEach((key) => {
+                            fileName = fileName.replace(`#${key}#`, req.params[key]);
+                        });
+                    }
+
+                    fileName = `${fileName}${extName}`;
+                }
+
+                cb(null, fileName);
+            }
+        });
+
+        return multer({ storage });
     }
 }

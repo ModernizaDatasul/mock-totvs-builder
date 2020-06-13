@@ -2,6 +2,7 @@
 
 # compiled output
 /data
+/uploads
 /tmp
 /out-tsc
 # Only exists if Bazel was run
