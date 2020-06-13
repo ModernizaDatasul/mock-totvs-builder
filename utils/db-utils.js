@@ -9,7 +9,7 @@ module.exports = {
                     let queryValue = query[key];
                     let itemValue = item[key];
 
-                    if (!itemValue) { return true; }
+                    if (itemValue === null || itemValue == undefined) { return true; }
 
                     if (typeof queryValue === 'string') { queryValue = queryValue.toUpperCase(); }
                     if (typeof itemValue === 'string') { itemValue = itemValue.toUpperCase(); }
@@ -33,6 +33,13 @@ module.exports = {
                     if (typeof itemValue === 'string') {
                         if (queryValue === 'ALL') { return true; }
                         return itemValue.includes(queryValue);
+                    }
+
+                    if (typeof itemValue === 'boolean') {
+                        if (itemValue && queryValue === "TRUE") { return true; }
+                        if (!itemValue && queryValue === "FALSE") { return true; }
+                        if (itemValue && (!queryValue)) { return true; }
+                        return false;
                     }
 
                     return itemValue == queryValue; // O tipo pode ser diferente então usa ==
