@@ -154,6 +154,48 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, response);
     },
 
+    customGetFile(req, res, entityCfg, customRoute) {
+        this.logRequest(`GET (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let fileName = null;
+        if (req.params) {
+            Object.keys(req.params).forEach((param) => { fileName = req.params[param]; });
+        }
+
+        if (!fileName) {
+            return res.status(404).json(
+                this.errorBuilderReturn([this.errorBuilder(404, `O nome do Arquivo deve ser informado !`)])
+            );
+        }
+
+        let fileDir = null;
+        if (customRoute.fileParam && customRoute.fileParam.directory) {
+            fileDir = customRoute.fileParam.directory;
+        }
+
+        let fileArq = null;
+        if (fileName && fileDir) {
+            fileArq = fileUts.pathJoin(fileDir, fileName);
+
+            if (fileUts.pathExist(fileArq)) {
+                fileArq = fileUts.pathFull(fileArq);
+            } else {
+                fileArq = null;
+            }
+        }
+
+        if (!fileArq) {
+            return res.status(404).json(
+                this.errorBuilderReturn([this.errorBuilder(404, `Arquivo ${fileName} não encontrado, no caminho ${fileDir} !`)])
+            );
+        }
+
+        return this.makeCustomResponse(res, customRoute, fileArq);
+    },
+
     customPost(req, res, entityCfg, fileName, customRoute) {
         this.logRequest(`POST (${customRoute.name})`, req);
 
@@ -174,7 +216,7 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, response);
     },
 
-    customUploadPost(req, res, entityCfg, fileName, customRoute) {
+    customPostUpload(req, res, entityCfg, fileName, customRoute) {
         this.logRequest(`POST (${customRoute.name})`, req);
 
         let customVld = this.customValidationParams('POST', req, res, entityCfg);
@@ -369,7 +411,7 @@ module.exports = {
     makeCustomResponse(res, customRoute, response) {
         let statusCodeResponse = 200;
 
-        if (customRoute.responseType !== "array") {
+        if (customRoute.responseType !== "array" && customRoute.responseType !== "file") {
             let database = response.items;
             database = database.length > 0 ? database[0] : {};
 
@@ -383,7 +425,11 @@ module.exports = {
             }
         }
 
-        return res.status(statusCodeResponse).json(response);
+        if (customRoute.responseType === "file") {
+            return res.status(statusCodeResponse).sendFile(response);
+        } else {
+            return res.status(statusCodeResponse).json(response);
+        }
     },
 
     logRequest(method, req) {

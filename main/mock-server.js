@@ -33,7 +33,7 @@ module.exports = {
         entitiesFiles.forEach(entityFile => {
             entitiesData.push({
                 fileName: entityFile,
-                config: JSON.parse(fileUts.readFile(entityFile))
+                config: JSON.parse(fileUts.readFileString(entityFile))
             });
         });
 
@@ -110,16 +110,22 @@ module.exports = {
 
             switch (customRoute.method.toUpperCase()) {
                 case 'GET':
-                    app.get(customPath, function (req, res) {
-                        return methodCtrl.customGet(req, res, entityCfg, customRoute);
-                    });
+                    if (customRoute.responseType && customRoute.responseType === "file") {
+                        app.get(customPath, function (req, res) {
+                            return methodCtrl.customGetFile(req, res, entityCfg, customRoute);
+                        });
+                    } else {
+                        app.get(customPath, function (req, res) {
+                            return methodCtrl.customGet(req, res, entityCfg, customRoute);
+                        });
+                    }
                     break;
                 case 'POST':
-                    if (customRoute.uploadFile) {
-                        const upload = this.makeUploadConfig(customRoute.uploadFile);
+                    if (customRoute.fileParam) {
+                        const upload = this.makeUploadConfig(customRoute.fileParam);
 
                         app.post(customPath, upload.single('files'), function (req, res) {
-                            return methodCtrl.customUploadPost(req, res, entityCfg, fileName, customRoute);
+                            return methodCtrl.customPostUpload(req, res, entityCfg, fileName, customRoute);
                         });
                     } else {
                         app.post(customPath, function (req, res) {
@@ -133,18 +139,18 @@ module.exports = {
         });
     },
 
-    makeUploadConfig(uploadFileCfg) {
+    makeUploadConfig(fileParam) {
         const storage = multer.diskStorage({
             destination: function (req, file, cb) {
-                cb(null, uploadFileCfg.dirDestination);
+                cb(null, fileParam.directory);
             },
             filename: function (req, file, cb) {
                 let fileName = file.originalname;
 
-                if (uploadFileCfg.fileName) {
+                if (fileParam.fileName) {
                     let extName = path.extname(file.originalname);
 
-                    fileName = uploadFileCfg.fileName;
+                    fileName = fileParam.fileName;
                     fileName = fileName.replace("#file#", file.originalname.replace(extName, ''));
                     fileName = fileName.replace("#now#", Date.now().toString());
 
