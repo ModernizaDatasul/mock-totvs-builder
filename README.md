@@ -147,31 +147,31 @@ Segue abaixo uma tabela com exemplos de rotas customizadas:
 		"responseType": "object",
 		"database": "db_block"
 	},
-    {
-        "name": "duplic",
-        "method": "POST",
-        "path": "/:idParam/duplic",
-        "database": "db_duplic"
-    },
-    {
-        "name": "upload",
-        "method": "POST",
-        "path": "/photo",
-        "fileParam": {
-            "fileName": "#file#_#today#",
-            "directory": "uploads/"
-        },
-        "database": "db_photo"
-    },
-    {
-        "name": "image",
-        "method": "GET",
-        "path": "/photo/:imageId",
-        "fileParam": {
-            "directory": "images/"
-        },
-        "responseType": "file"
-    }
+	{
+		"name": "duplic",
+		"method": "POST",
+		"path": "/:idParam/duplic",
+		"database": "db_duplic"
+	},
+	{
+		"name": "upload",
+		"method": "POST",
+		"path": "/photo",
+		"fileParam": {
+			"fileName": "#file#_#today#",
+			"directory": "uploads/"
+		},
+		"database": "db_photo"
+	},
+	{
+		"name": "image",
+		"method": "GET",
+		"path": "/photo/:imageId",
+		"fileParam": {
+			"directory": "images/"
+		},
+		"responseType": "file"
+	}
 ],
 "db_nextId": [
 	{
