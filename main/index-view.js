@@ -111,8 +111,8 @@ module.exports = {
             entityCfg.customRoutes.forEach((customRoute) => {
                 entityRoutes.push({
                     type: "CUSTOM", name: customRoute.name, method: customRoute.method,
-                    path: customRoute.path, responseType: customRoute.responseType,
-                    database: customRoute.database
+                    path: customRoute.path, fileParam: JSON.stringify(customRoute.fileParam), 
+                    responseType: customRoute.responseType, database: customRoute.database
                 });
             });
         }
@@ -123,6 +123,7 @@ module.exports = {
         res.write('  <th>name</th>');
         res.write('  <th style="text-align: center">method</th>');
         res.write('  <th>path</th>');
+        res.write('  <th>fileParam</th>');
         res.write('  <th>responseType</th>');
         res.write('  <th style="text-align: center">database</th>');
         res.write(' </tr>');
@@ -137,6 +138,7 @@ module.exports = {
             res.write(`  <td>${entityRoute.name}</td>`);
             res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
             res.write(`  <td>/${entityCfg.entityName}${entityRoute.path}</td>`);
+            res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
             res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
             res.write('  <td style="text-align: center">');
             res.write(`   <a href="${urlIndex}&database=${entityRoute.database}">`);
