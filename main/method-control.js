@@ -145,11 +145,14 @@ module.exports = {
         let customVld = this.customValidationParams('GET', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let database = genUts.copyArray(entityCfg[customRoute.database]);
-        let response = this.applyAllQueryFilters(database, req);
+        let response = {};
+        if (customRoute.database) {
+            let database = genUts.copyArray(entityCfg[customRoute.database]);
+            response = this.applyAllQueryFilters(database, req);
 
-        customVld = this.customValidationDatabase('GET', response.items, res, entityCfg);
-        if (customVld) { return customVld; };
+            customVld = this.customValidationDatabase('GET', response.items, res, entityCfg);
+            if (customVld) { return customVld; };
+        }
 
         return this.makeCustomResponse(res, customRoute, response);
     },
@@ -202,15 +205,18 @@ module.exports = {
         let customVld = this.customValidationParams('POST', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let database = genUts.copyArray(entityCfg[customRoute.database]);
-        let response = this.applyAllQueryFilters(database, req);
+        let response = {};
+        if (customRoute.database) {
+            let database = genUts.copyArray(entityCfg[customRoute.database]);
+            response = this.applyAllQueryFilters(database, req);
 
-        if (req.body && Object.keys(req.body).length > 0) {
-            entityCfg[customRoute.database].push(req.body);
-            fileUts.saveFile(fileName, entityCfg);
-        } else {
-            customVld = this.customValidationDatabase('POST', response.items, res, entityCfg);
-            if (customVld) { return customVld; };
+            if (req.body && Object.keys(req.body).length > 0) {
+                entityCfg[customRoute.database].push(req.body);
+                fileUts.saveFile(fileName, entityCfg);
+            } else {
+                customVld = this.customValidationDatabase('POST', response.items, res, entityCfg);
+                if (customVld) { return customVld; };
+            }
         }
 
         return this.makeCustomResponse(res, customRoute, response);
@@ -229,8 +235,10 @@ module.exports = {
             fileName: req.file.filename
         }
 
-        entityCfg[customRoute.database].push(uploadFile);
-        fileUts.saveFile(fileName, entityCfg);
+        if (customRoute.database) {
+            entityCfg[customRoute.database].push(uploadFile);
+            fileUts.saveFile(fileName, entityCfg);
+        }
 
         return this.makeCustomResponse(res, customRoute, { items: [uploadFile] });
     },
@@ -412,14 +420,13 @@ module.exports = {
         let statusCodeResponse = 200;
 
         if (customRoute.responseType !== "array" && customRoute.responseType !== "file") {
-            let database = response.items;
+            let database = response.items || [];
             database = database.length > 0 ? database[0] : {};
 
             statusCodeResponse = (database['statusCodeResponse']) || 200;
 
             if (database['errorResponse']) {
                 response = this.errorBuilderReturn([this.errorBuilder(statusCodeResponse, database['errorResponse'])]);
-
             } else {
                 response = database;
             }

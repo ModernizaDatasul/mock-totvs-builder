@@ -141,9 +141,11 @@ module.exports = {
             res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
             res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
             res.write('  <td style="text-align: center">');
-            res.write(`   <a href="${urlIndex}&database=${entityRoute.database}">`);
-            res.write(`    [${entityRoute.database} x${dbRoute.length}]`);
-            res.write('   </a>');
+            if (entityRoute.database) {
+                res.write(`   <a href="${urlIndex}&database=${entityRoute.database}">`);
+                res.write(`    [${entityRoute.database} x${dbRoute.length}]`);
+                res.write('   </a>');
+            }
             res.write('  </td>');
             res.write(' </tr>');
         });

@@ -18,7 +18,6 @@ module.exports = {
         const dataFile = this.readDataFile(path.join(projRootDir, 'data'));
 
         if (!this.validEntitiesData(dataFile)) { return null; }
-        this.ajustEntitiesData(dataFile);
         this.createRouters(app, dataFile);
 
         const server = http.Server(app);
@@ -45,19 +44,6 @@ module.exports = {
         // Em desenvolvimento - Fazer a validação os arquivos
 
         return true;
-    },
-
-    ajustEntitiesData(entitiesData) {
-        entitiesData.forEach(entityData => {
-            let entityCfg = entityData.config;
-
-            // Seta o "database" para as rotas que não tem informado
-            if (entityCfg.customRoutes) {
-                entityCfg.customRoutes.forEach(customRoute => {
-                    if (!customRoute.database) { customRoute.database = "database"; }
-                });
-            };
-        });
     },
 
     createRouters(app, entitiesData) {
