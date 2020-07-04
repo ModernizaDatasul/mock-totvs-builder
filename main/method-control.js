@@ -7,7 +7,7 @@ module.exports = {
     query(req, res, entityCfg) {
         this.logRequest('GET (query)', req);
 
-        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let response = this.applyAllQueryFilters(entityCfg.database, req);
@@ -21,7 +21,7 @@ module.exports = {
         if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
         let entityId = req.params.id;
 
-        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        let customVld = this.customValidationParams('GET', 'get', req, res, entityCfg);
         if (customVld) { return customVld; };
 
         const entityResponse = entityCfg.database.find((entity) => {
@@ -34,7 +34,7 @@ module.exports = {
             );
         }
 
-        customVld = this.customValidationDatabase('GET', entityResponse, res, entityCfg);
+        customVld = this.customValidationDatabase('GET', 'get', entityResponse, res, entityCfg);
         if (customVld) { return customVld; };
 
         return res.json(entityResponse);
@@ -50,7 +50,7 @@ module.exports = {
         if (!req.params) req["params"] = {};
         req.params["id"] = entityId;
 
-        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        let customVld = this.customValidationParams('POST', 'create', req, res, entityCfg);
         if (customVld) { return customVld; };
 
         const index = entityDB.findIndex((entity) => {
@@ -77,7 +77,7 @@ module.exports = {
         if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
         let entityId = req.params.id;
 
-        let customVld = this.customValidationParams('PUT', req, res, entityCfg);
+        let customVld = this.customValidationParams('PUT', 'update', req, res, entityCfg);
         if (customVld) { return customVld; };
 
         const entityDB = entityCfg.database;
@@ -92,7 +92,7 @@ module.exports = {
             );
         }
 
-        customVld = this.customValidationDatabase('PUT', entityDB[index], res, entityCfg);
+        customVld = this.customValidationDatabase('PUT', 'update', entityDB[index], res, entityCfg);
         if (customVld) { return customVld; };
 
         Object.keys(req.body).forEach((property) => {
@@ -112,7 +112,7 @@ module.exports = {
         if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
         let entityId = req.params.id;
 
-        let customVld = this.customValidationParams('DELETE', req, res, entityCfg);
+        let customVld = this.customValidationParams('DELETE', 'delete', req, res, entityCfg);
         if (customVld) { return customVld; };
 
         const entityDB = entityCfg.database;
@@ -127,7 +127,7 @@ module.exports = {
             );
         }
 
-        customVld = this.customValidationDatabase('DELETE', entityDB[index], res, entityCfg);
+        customVld = this.customValidationDatabase('DELETE', 'delete', entityDB[index], res, entityCfg);
         if (customVld) { return customVld; };
 
         entityDB.splice(index, 1);
@@ -142,7 +142,7 @@ module.exports = {
     customGet(req, res, entityCfg, customRoute) {
         this.logRequest(`GET (${customRoute.name})`, req);
 
-        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let response = {};
@@ -150,7 +150,7 @@ module.exports = {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
             response = this.applyAllQueryFilters(database, req);
 
-            customVld = this.customValidationDatabase('GET', response.items, res, entityCfg);
+            customVld = this.customValidationDatabase('GET', customRoute.name, response.items, res, entityCfg);
             if (customVld) { return customVld; };
         }
 
@@ -160,7 +160,7 @@ module.exports = {
     customGetFile(req, res, entityCfg, customRoute) {
         this.logRequest(`GET (${customRoute.name})`, req);
 
-        let customVld = this.customValidationParams('GET', req, res, entityCfg);
+        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let fileName = null;
@@ -202,7 +202,7 @@ module.exports = {
     customPost(req, res, entityCfg, fileName, customRoute) {
         this.logRequest(`POST (${customRoute.name})`, req);
 
-        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let response = {};
@@ -214,7 +214,7 @@ module.exports = {
                 entityCfg[customRoute.database].push(req.body);
                 fileUts.saveFile(fileName, entityCfg);
             } else {
-                customVld = this.customValidationDatabase('POST', response.items, res, entityCfg);
+                customVld = this.customValidationDatabase('POST', customRoute.name, response.items, res, entityCfg);
                 if (customVld) { return customVld; };
             }
         }
@@ -225,7 +225,7 @@ module.exports = {
     customPostUpload(req, res, entityCfg, fileName, customRoute) {
         this.logRequest(`POST (${customRoute.name})`, req);
 
-        let customVld = this.customValidationParams('POST', req, res, entityCfg);
+        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let uploadFile = {
@@ -243,7 +243,7 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, { items: [uploadFile] });
     },
 
-    customValidationParams(method, req, res, entityCfg) {
+    customValidationParams(method, route, req, res, entityCfg) {
         if (!entityCfg.customValidation || entityCfg.customValidation.length === 0) {
             return null;
         }
@@ -257,11 +257,12 @@ module.exports = {
 
         entityCfg.customValidation.forEach(custVld => {
             let vldMethod = (!custVld.method || custVld.method.length === 0 || custVld.method.includes(method));
+            let vldRoute = (!custVld.route || custVld.route.length === 0 || custVld.route.includes(route));
             let vldPathParam = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('pathParam'));
             let vldQueryParam = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('queryParam'));
             let vldPayload = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('payload'));
 
-            if (vldMethod) {
+            if (vldMethod && vldRoute) {
                 if (vldPathParam && req.params) {
                     errorCustVld = this.executeCustomValidation(req.params, custVld);
                     if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
@@ -286,7 +287,7 @@ module.exports = {
         return null;
     },
 
-    customValidationDatabase(method, database, res, entityCfg) {
+    customValidationDatabase(method, route, database, res, entityCfg) {
         if (!entityCfg.customValidation || entityCfg.customValidation.length === 0) {
             return null;
         }
@@ -303,9 +304,10 @@ module.exports = {
 
         entityCfg.customValidation.forEach(custVld => {
             let vldMethod = (!custVld.method || custVld.method.length === 0 || custVld.method.includes(method));
+            let vldRoute = (!custVld.route || custVld.route.length === 0 || custVld.route.includes(route));
             let vldDatabase = (!custVld.from || custVld.from.length === 0 || custVld.from.includes('database'));
 
-            if (vldMethod && vldDatabase) {
+            if (vldMethod && vldRoute && vldDatabase) {
                 database.forEach(item => {
                     errorCustVld = this.executeCustomValidation(item, custVld);
                     if (errorCustVld) { errorList = [...errorList, ...errorCustVld] };
