@@ -468,6 +468,7 @@ Para incorporar o mock-totvs-builder ao seu projeto, basta seguir os passos abai
 		server.listen(3000, () => { console.log('Mock no AR, Porta: 3000'); });
 	} else {
 		console.log('Não foi possível carregar o Mock, verifique os arquivos de configuração (data) !');
+	}
 	```
 
 3) Nesta mesma pasta, criar um pasta chamada **"data"** onde deverão ser salvos os arquivos de configuração das Entidades, conforme descrito no início da documentação.
