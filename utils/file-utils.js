@@ -3,11 +3,13 @@ const path = require('path');
 
 module.exports = {
 
-    readDir(directoryPath) {
+    readDir(directoryPath, filter = null) {
         const files = fs.readdirSync(directoryPath);
         const filesReturn = [];
         files.forEach((file) => {
-            filesReturn.push(this.pathJoin(directoryPath, file));
+            if (!filter || file.indexOf(filter) >= 0) {
+                filesReturn.push(this.pathJoin(directoryPath, file));
+            }
         });
         return filesReturn;
     },

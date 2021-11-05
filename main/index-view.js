@@ -43,7 +43,8 @@ module.exports = {
         res.write('  <th>entityName</th>');
         res.write('  <th>entityLabel</th>');
         res.write('  <th>keys</th>');
-        res.write('  <th>b64Key</th>');
+        res.write('  <th>searchField</th>');
+        res.write('  <th>base64Key</th>');
         res.write('  <th style="text-align: center">routes</th>');
         res.write('  <th style="text-align: center">customVld</th>');
         res.write('  <th style="text-align: center">database</th>');
@@ -57,6 +58,7 @@ module.exports = {
             res.write(`  <td>${entityCfg.entityName}</td>`);
             res.write(`  <td>${entityCfg.entityLabel || ''}</td>`);
             res.write(`  <td>${JSON.stringify(entityCfg.keys)}</td>`);
+            res.write(`  <td>${entityCfg.searchField || ''}</td>`);
             res.write(`  <td>${entityCfg.base64Key || false}</td>`);
             res.write('  <td style="text-align: center">');
             res.write(`   <a href="${urlIndex}&config=routes">`);
@@ -111,7 +113,8 @@ module.exports = {
             entityCfg.customRoutes.forEach((customRoute) => {
                 entityRoutes.push({
                     type: "CUSTOM", name: customRoute.name, method: customRoute.method,
-                    path: customRoute.path, fileParam: JSON.stringify(customRoute.fileParam), 
+                    path: customRoute.path, script: customRoute.script,
+                    fileParam: JSON.stringify(customRoute.fileParam),
                     responseType: customRoute.responseType, database: customRoute.database
                 });
             });
@@ -123,6 +126,7 @@ module.exports = {
         res.write('  <th>name</th>');
         res.write('  <th style="text-align: center">method</th>');
         res.write('  <th>path</th>');
+        res.write('  <th>script</th>');
         res.write('  <th>fileParam</th>');
         res.write('  <th>responseType</th>');
         res.write('  <th style="text-align: center">database</th>');
@@ -138,6 +142,7 @@ module.exports = {
             res.write(`  <td>${entityRoute.name}</td>`);
             res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
             res.write(`  <td>/${entityCfg.entityName}${entityRoute.path}</td>`);
+            res.write(`  <td>${entityRoute.script || ''}</td>`);
             res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
             res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
             res.write('  <td style="text-align: center">');

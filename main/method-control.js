@@ -10,7 +10,7 @@ module.exports = {
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let response = this.applyAllQueryFilters(entityCfg.database, req);
+        let response = this.applyAllQueryFilters(entityCfg.database, req, entityCfg.searchField);
 
         return res.json(response);
     },
@@ -148,13 +148,52 @@ module.exports = {
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req);
+            response = this.applyAllQueryFilters(database, req, entityCfg.searchField);
 
             customVld = this.customValidationDatabase('GET', customRoute.name, response.items, res, entityCfg);
             if (customVld) { return customVld; };
         }
 
         return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    customGetScript(req, res, entityCfg, customRoute, projRootDir) {
+        this.logRequest(`GET (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let arqScript = fileUts.pathJoin(projRootDir, 'data');
+        arqScript = fileUts.pathJoin(arqScript, customRoute.script);
+
+        if (!fileUts.pathExist(arqScript)) {
+            return res.status(500).json(
+                this.errorBuilderReturn([this.errorBuilder(500, `Script da Rota não encontrado: ${arqScript}`)])
+            );
+        }
+
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
+        let customScript = null;
+        let responseScript = null;
+
+        try {
+            customScript = require(arqScript);
+            responseScript = customScript.get(req.params, req.query, database);
+        }
+        catch (errorScript) {
+            return res.status(500).json(
+                this.errorBuilderReturn([this.errorTryCatchBuilder(500, 'Erro ao executar o Script da Rota !', errorScript)])
+            );
+        }
+
+        let statusCodeResponse = 200;
+        let response = {};
+        if (responseScript) {
+            if (responseScript.statusCode) { statusCodeResponse = responseScript.statusCode };
+            if (responseScript.response) { response = responseScript.response };
+        }
+
+        return res.status(statusCodeResponse).json(response);
     },
 
     customGetFile(req, res, entityCfg, customRoute) {
@@ -170,7 +209,7 @@ module.exports = {
 
         if (!fileName) {
             return res.status(404).json(
-                this.errorBuilderReturn([this.errorBuilder(404, `O nome do Arquivo deve ser informado !`)])
+                this.errorBuilderReturn([this.errorBuilder(404, 'O nome do Arquivo deve ser informado !')])
             );
         }
 
@@ -208,7 +247,7 @@ module.exports = {
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req);
+            response = this.applyAllQueryFilters(database, req, entityCfg.searchField);
 
             if (req.body && Object.keys(req.body).length > 0) {
                 entityCfg[customRoute.database].push(req.body);
@@ -220,6 +259,49 @@ module.exports = {
         }
 
         return this.makeCustomResponse(res, customRoute, response);
+    },
+
+    customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir) {
+        this.logRequest(`POST (${customRoute.name})`, req);
+
+        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
+        if (customVld) { return customVld; };
+
+        let arqScript = fileUts.pathJoin(projRootDir, 'data');
+        arqScript = fileUts.pathJoin(arqScript, customRoute.script);
+
+        if (!fileUts.pathExist(arqScript)) {
+            return res.status(500).json(
+                this.errorBuilderReturn([this.errorBuilder(500, `Script da Rota não encontrado: ${arqScript}`)])
+            );
+        }
+
+        let database = genUts.copyArray(entityCfg[customRoute.database]);
+        let customScript = null;
+        let responseScript = null;
+
+        try {
+            customScript = require(arqScript);
+            responseScript = customScript.post(req.params, req.query, req.body, database);
+        }
+        catch (errorScript) {
+            return res.status(500).json(
+                this.errorBuilderReturn([this.errorTryCatchBuilder(500, 'Erro ao executar o Script da Rota !', errorScript)])
+            );
+        }
+
+        let statusCodeResponse = 200;
+        let response = {};
+        if (responseScript) {
+            if (responseScript.statusCode) { statusCodeResponse = responseScript.statusCode };
+            if (responseScript.response) { response = responseScript.response };
+            if (responseScript.database) {
+                entityCfg[customRoute.database] = responseScript.database;
+                fileUts.saveFile(fileName, entityCfg);
+            }
+        }
+
+        return res.status(statusCodeResponse).json(response);
     },
 
     customPostUpload(req, res, entityCfg, fileName, customRoute) {
@@ -397,12 +479,13 @@ module.exports = {
         return entityKeyValue == id; // o "tipo" pode diferente, então usa "==" 
     },
 
-    applyAllQueryFilters(dbConfig, req) {
+    applyAllQueryFilters(dbConfig, req, searchField) {
         let database = genUts.copyArray(dbConfig);
+        let fromTo = (searchField) ? { search: searchField } : null;
 
-        if (req.params) { database = dbUts.applyQueryFilter(database, req.params); }
+        if (req.params) { database = dbUts.applyQueryFilter(database, req.params, fromTo); }
 
-        if (req.query) { database = dbUts.applyQueryFilter(database, req.query); }
+        if (req.query) { database = dbUts.applyQueryFilter(database, req.query, fromTo); }
 
         const { pageSize = 20, page = 1, order, fields } = req.query;
         const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);
@@ -455,6 +538,19 @@ module.exports = {
             code: cod,
             message: msg,
             detailedMessage: help || msg
+        }
+    },
+
+    errorTryCatchBuilder(cod, msg, error) {
+        let descError = null;
+        if (error.name) { descError = error.name; }
+        if (error.message) { descError = `${descError} - ${error.message}`; }
+        if (error.stack) { descError = `${descError} - ${error.stack}`; }
+
+        return {
+            code: cod,
+            message: msg,
+            detailedMessage: descError || msg
         }
     },
 

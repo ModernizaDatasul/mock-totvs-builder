@@ -1,13 +1,16 @@
 module.exports = {
 
-    applyQueryFilter(list, query) {
+    applyQueryFilter(list, query, fromTo) {
         let filteredList = list;
+        let keyItem = null;
 
-        Object.keys(query).forEach((key) => {
-            if (key !== 'pageSize' && key !== 'page' && key !== 'fields' && key !== 'order') {
+        Object.keys(query).forEach((keyQry) => {
+            if (keyQry !== 'pageSize' && keyQry !== 'page' && keyQry !== 'fields' && keyQry !== 'order') {
+                keyItem = (fromTo && fromTo[keyQry]) ? fromTo[keyQry] : keyQry;
+
                 filteredList = filteredList.filter((item) => {
-                    let queryValue = query[key];
-                    let itemValue = item[key];
+                    let queryValue = query[keyQry];
+                    let itemValue = item[keyItem];
 
                     if (itemValue === null || itemValue == undefined) { return true; }
 

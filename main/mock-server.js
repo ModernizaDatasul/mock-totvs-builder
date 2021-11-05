@@ -18,7 +18,7 @@ module.exports = {
         const dataFile = this.readDataFile(path.join(projRootDir, 'data'));
 
         if (!this.validEntitiesData(dataFile)) { return null; }
-        this.createRouters(app, dataFile);
+        this.createRouters(app, projRootDir, dataFile);
 
         const server = http.Server(app);
         return server;
@@ -26,7 +26,7 @@ module.exports = {
 
     readDataFile(dataFile) {
         // Faz a Leitura das Configurações de cada Entidade
-        const entitiesFiles = fileUts.readDir(dataFile);
+        const entitiesFiles = fileUts.readDir(dataFile, '.json');
         const entitiesData = [];
 
         entitiesFiles.forEach(entityFile => {
@@ -46,13 +46,13 @@ module.exports = {
         return true;
     },
 
-    createRouters(app, entitiesData) {
+    createRouters(app, projRootDir, entitiesData) {
         // Index - Mostra todas a Entidades carregadas
         this.makeIndexRoute(app, entitiesData);
 
         // Configura as Rotas para cada Entidade
         entitiesData.forEach(entityData => {
-            this.makeCustomRoute(app, entityData.fileName, entityData.config);
+            this.makeCustomRoute(app, projRootDir, entityData.fileName, entityData.config);
             this.makeCRUDRoute(app, entityData.fileName, entityData.config);
         });
     },
@@ -87,7 +87,7 @@ module.exports = {
         });
     },
 
-    makeCustomRoute(app, fileName, entityCfg) {
+    makeCustomRoute(app, projRootDir, fileName, entityCfg) {
         if (!entityCfg.customRoutes) { return; }
         if (entityCfg.customRoutes.length === 0) { return; }
 
@@ -101,22 +101,33 @@ module.exports = {
                             return methodCtrl.customGetFile(req, res, entityCfg, customRoute);
                         });
                     } else {
-                        app.get(customPath, function (req, res) {
-                            return methodCtrl.customGet(req, res, entityCfg, customRoute);
-                        });
+                        if (customRoute.script) {
+                            app.get(customPath, function (req, res) {
+                                return methodCtrl.customGetScript(req, res, entityCfg, customRoute, projRootDir);
+                            });
+                        } else {
+                            app.get(customPath, function (req, res) {
+                                return methodCtrl.customGet(req, res, entityCfg, customRoute);
+                            });
+                        }
                     }
                     break;
                 case 'POST':
                     if (customRoute.fileParam) {
                         const upload = this.makeUploadConfig(customRoute.fileParam);
-
                         app.post(customPath, upload.single('files'), function (req, res) {
                             return methodCtrl.customPostUpload(req, res, entityCfg, fileName, customRoute);
                         });
                     } else {
-                        app.post(customPath, function (req, res) {
-                            return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
-                        });
+                        if (customRoute.script) {
+                            app.post(customPath, function (req, res) {
+                                return methodCtrl.customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir);
+                            });
+                        } else {
+                            app.post(customPath, function (req, res) {
+                                return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
+                            });
+                        }
                     }
                     break;
                 default:

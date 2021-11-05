@@ -14,7 +14,8 @@ Para cada entidade, deverá existir um arquivo de configuração no formato **"J
 |--|--|--|--|
 |**entityName**|Sim|Nome da entidade, que será utilizado para roteamento.<br>**Observação**: O nome deve ser único, isto é, não deve existir outra entidade com o mesmo nome.|```"customer"```|
 |**entityLabel**|Não|Descrição da entidade, que será apresentada nas mensagens de erro.<br>Quando não informado será utilizado **entityName**.|```"Cliente"```|
-|**Keys**|Sim|Lista de atributos que fazem parte da chave única da entidade.|Ex1 (chave simples):<br>```["code"]```<br>Ex2 (chave composta):<br>```["company","id"]```|
+|**keys**|Sim|Lista de atributos que fazem parte da chave única da entidade.|Ex1 (chave simples):<br>```["code"]```<br>Ex2 (chave composta):<br>```["company","id"]```|
+|**searchField**|Não|Nome do campo que será utilizado para consulta padrão, quando for realizada uma requisição com o QueryParam **"search"**. Por exemplo, se for realizada a requisição: **"GET \customer?search=Roberto"**, os dados serão filtrados pelos registros onde a string **"Roberto"** esteja no conteúdo do campo informado neste parâmetro.|```"shortName"```|
 |**base64Key**|Não|Indica se a chave da entidade é enviada em Base64 nas requisições de GET, PUT e DELETE. Caso afirmativo, a chave recebida será convertida **(base64 decode)** antes de realizar a busca da entidade. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
 |**customRoutes**|Não|Lista de Rotas customizadas. Utilizado para quando as rotas padrões (ver tópico: **Rotas Pré-definidas**) não atendem.<br>Para configurar as rotas, verificar o tópico: **Configurando Rotas Customizadas**.|```[{"name": "nextId", "method": "GET", "path": "/nextId", "database": "db_nextId"},```<br>```{"name": "block", "method": "POST", "path": "/:idParam/block", "database": "db_block"}]```|
 |**customValidation**|Não|Lista de Validações customizadas. Utilizado para simular erros/validações executadas pelo BackEnd.<br>Para configurar as validações, verificar o tópico: **Configurando Validações Customizadas**.|```[{"name": "vld_block","method": ["DELETE"],"from": ["payload","database"],"field": ["status"],"operation": "=","value": 3,"msgError": "Cliente está Bloqueado !"}]```|
@@ -22,28 +23,28 @@ Para cada entidade, deverá existir um arquivo de configuração no formato **"J
 
 **Exemplo da configuração de uma Entidade**
 
-**Arquivo:** data/customer.json<br>
+**Arquivo:** data/customer.json
 ```
 {
-    "entityName": "customer",
-    "entityLabel": "Cliente",
-    "keys": [ "code" ],
-    "database": [
-        {
-            "code": 1,
-            "shortName": "João",
-            "name": "Joãozinho da Silva",
-            "country": "BRA",
-            "status": 2
-        },
-        {
-            "code": 2,
-            "shortName": "Maria",
-            "name": "Maria Barbosa",
-            "country": "BRA",
-            "status": 1
-        }
-    ]
+	"entityName": "customer",
+	"entityLabel": "Cliente",
+	"keys": [ "code" ],
+	"database": [
+		{
+			"code": 1,
+			"shortName": "João",
+			"name": "Joãozinho da Silva",
+			"country": "BRA",
+			"status": 2
+		},
+		{
+			"code": 2,
+			"shortName": "Maria",
+			"name": "Maria Barbosa",
+			"country": "BRA",
+			"status": 3
+		}
+	]
 }
 ```
 
@@ -52,10 +53,10 @@ Segue abaixo a lista de Rotas Pré-definidas para manipulação das Entidades.
 |Name|Método|Descrição|Exemplo|
 |--|--|--|--|
 |**query**|**GET**|Retorna todos os registros da entidade, respeitando os parâmetros definidos como Busca Avançada. Veja detalhes no tópico **Busca Avançada**.|```GET /customer```|
-|**get**|**GET**|Retorna um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornado uma mensagem de erro.|```GET /customer/7```|
-|**create**|**POST**|Cria um novo registro. Os dados da entidade devem ser enviados no **Payload**. Caso já exista um registro com a chave da entidade, será retornado uma mensagem de erro.|```POST /customer```<br>Payload:<br>```{"code": 2, "shortName": "Maria", "name": "Maria Barbosa"}```|
-|**update**|**PUT**|Altera um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). E, no **Payload** os dados que devem ser alterados. Caso o registro não exista, será retornado uma mensagem de erro.|```PUT /customer/2```<br>Payload:<br>```{"name": "Maria Barbosa da Silva"}```|
-|**delete**|**DELETE**|Elimina um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornado uma mensagem de erro.|```DELETE /customer/10```|  
+|**get**|**GET**|Retorna um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornada uma mensagem de erro.|```GET /customer/7```|
+|**create**|**POST**|Cria um novo registro. Os dados da entidade devem ser enviados no **Payload**. Caso já exista um registro com a chave da entidade, será retornada uma mensagem de erro.|```POST /customer```<br>Payload:<br>```{"code": 2, "shortName": "Maria", "name": "Maria Barbosa"}```|
+|**update**|**PUT**|Altera um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). E, no **Payload** os dados que devem ser alterados. Caso o registro não exista, será retornada uma mensagem de erro.|```PUT /customer/2```<br>Payload:<br>```{"name": "Maria Barbosa da Silva"}```|
+|**delete**|**DELETE**|Elimina um registro específico. Para isto, deve ser enviado um **PathParam** com o valor da chave da entidade. Se a chave for composta, utilizar **';'** para separar os valores (ex: 10;5). Caso o registro não exista, será retornada uma mensagem de erro.|```DELETE /customer/10```|  
 
 **Observações:**
 
@@ -69,12 +70,12 @@ Ao fazer uma requisição, permite enviar **QueryParams** pré-definidos para fi
 
 |Funcionalidade|Descrição|Exemplo|
 |--|--|--|
-|**Paginação**<br>(pageSize, page)|Realiza o controle de Paginação, retornado as páginas conforme solicitado. Caso não sejam enviados, serão considerados **"page = 1"** e **"pageSize = 20"**.|```/customer?page=1&pageSize=10```|
-|**Filtro (Simples)**<br>(atributo=valor)|Possibilita realizar filtros utilizando todos os atributos existentes na entidade. O valor poderá ser uma informação qualquer, que seja do mesmo tipo de dado do atributo. Caso o tipo de dado seja string, a busca não será pelo valor exato, ela ir considerar que o atributo contenha esta valor.|```/customer?name=João```|
+|**Paginação**<br>(pageSize, page)|Realiza o controle de Paginação, retornando as páginas conforme solicitado. Caso não sejam enviados, serão considerados **"page = 1"** e **"pageSize = 20"**.|```/customer?page=1&pageSize=10```|
+|**Filtro (Simples)**<br>(atributo=valor)|Possibilita realizar filtros utilizando todos os atributos existentes na entidade. O valor poderá ser uma informação qualquer, que seja do mesmo tipo de dado do atributo. Caso o tipo de dado seja string, a busca não será pelo valor exato, ela irá considerar que o atributo contenha este valor.|```/customer?name=João```|
 |**Filtro (Range)**<br>(atributo=valIni;ValFim)|Realiza o filtro considerando uma faixa. Neste caso, os valores inicial e final, devem ser enviados com o separador **";"**.|```/customer?code=2;5```|
 |**Filtro (Lista)**<br>(atributo=val1,val2,valN)|Realiza o filtro considerando uma lista. Neste caso, os valores devem ser enviados com o separador **","**.|```/customer?country=BRA,USA,ARG```|
-|**Seleção de Atributos**<br>(fields)|Permite indicar quais atributos da entidade devem ser retornados. Para isto, deve ser enviando o **QueryParam** **"fields"** com a lista de atributos. Caso não seja enviado, retorna todos os atributos da entidade.|```/customer?fields=code,name```|
-|**Ordenação**<br>(order)|Permite indicar um atributo para realizar a ordenação dos dados retornados. Para isto, deve ser enviando o **QueryParam** **"order"** com o nome do atributo. Utilizar o caracter **'-'** na frente do atributo para indicar que a ordenação seja descendente. Caso não seja enviado, os dados serão retornados na ordem em que estiver no arquivo de configuração da entidade.|```/customer?order=name```|
+|**Seleção de Atributos**<br>(fields)|Permite indicar quais atributos da entidade devem ser retornados. Para isto, deve ser enviado o **QueryParam** **"fields"** com a lista de atributos. Caso não seja enviado, retorna todos os atributos da entidade.|```/customer?fields=code,name```|
+|**Ordenação**<br>(order)|Permite indicar um atributo para realizar a ordenação dos dados retornados. Para isto, deve ser enviado o **QueryParam** **"order"** com o nome do atributo. Utilizar o caracter **'-'** na frente do atributo para indicar que a ordenação seja descendente. Caso não seja enviado, os dados serão retornados na ordem em que estiver no arquivo de configuração da entidade.|```/customer?order=name```|
 
 # Configurando Rotas Customizadas
 Quando as rotas padrões pré-definidas não atendem, é possível configurar novas rotas. Para isto, basta incluir o parâmetro **"customRoutes"** no arquivo de configuração da Entidade e incluir a lista de rotas. Cada rota, deve respeitar a configuração conforme tabela abaixo:
@@ -83,9 +84,49 @@ Quando as rotas padrões pré-definidas não atendem, é possível configurar no
 |**name**|Sim|Um nome qualquer para identificar a Rota. Será apresentado no Log quando realizada uma requisição para ela.<br>**Observação**: O nome deve ser único, isto é, não deve existir outra rota (Pré-definida ou Customizada) com o mesmo nome.|```"nextId"```|
 |**method**|Sim|Método da Requisição. Podendo ser:<br>**- GET:** Utilizado para retornar alguma informação (ex: Próximo ID, Valores totais de uma pesquisa, etc).<br>**- POST:** Utilizado para executar alguma ação ou enviar alguma informação (Bloquear um cliente, Disparar um relatório, Enviar dados para duplicar um cliente, etc).<br>**Observações:**<br> - Independente do método, serão aplicadas as mesmas regras de pesquisa de Busca Avançada (ver tópico **Rotas Pré-definidas - Busca Avançada**), desta forma, terá o controle de Paginação, Ordenação, Filtro, etc;<br>- A pesquisa será realizada sobre a lista informada no parâmetro **"database"** da rota;<br>- Ao realizar um **"POST"**, o que for enviado no **Payload** será salvo na lista informada no parâmetro **"database"** da rota.|```"GET"```<br>OU<br>```"POST"```|
 |**path**|Sim|URL que será utilizado na Requisição. É a informação que virá após a entidade. Por exemplo, na URL **"/customer/nextId"** deve ser informado **"/nextId"**.<br>Também é possível indicar parâmetros na URL, utilizando **":" + "nome-parâmetro"** (ex: "/:idCust/block"). Ele será utilizado para filtrar a lista informada no parâmetro **"database"** da rota. Para isto, é necessário que exista um atributo na lista com o mesmo nome do parâmetro. Por exemplo, para a URL **"/:idCust/block"** deve existir um atributo chamado **"idCust"** na lista **database** da rota. Desta forma, é possível configurar retornos diferentes conforme o parâmetro enviado (ex: Se o cliente for "1" retorna Bloqueio OK, se o cliente for "3", retornar um erro).|Ex1:<br>```"/nextId"```<br>Ex2:<br>```"/:idCust/block"```|
-|**fileParam**|Não|Parâmetro utilizando quando a rota é destinada a receber arquivos via Upload, ou devolver arquivos a partir do Backend.<br>Ver detalhes da configuração no tópico: **Configurando Rota para Tratamento de Arquivo**.|```{"fileName": "#file#_#today#", "directory": "uploads/"}```|
+|**script**|Não|Parâmetro utilizado para informar um programa desenvolvido em NodeJS, que será executado ao receber a Requisição na Rota. Desta forma é possível programar qualquer comportamento, ou até mesmo realizar algum cálculo com base nos dados.<br>Ver detalhes da configuração no tópico: **Configurando Script de Rota**.|```"customer.js"```|
+|**fileParam**|Não|Parâmetro utilizado quando a rota é destinada a receber arquivos via Upload, ou devolver arquivos a partir do Backend.<br>Ver detalhes da configuração no tópico: **Configurando Rota para Tratamento de Arquivo**.|```{"fileName": "#file#_#today#", "directory": "uploads/"}```|
 |**responseType**|Não|Tipo do Response que será retornado. Podendo ser:<br>**- object:** Retorna um objeto JSON. Se a pesquisa resultar em mais de um registro, será considerado somente o primeiro.<br>**- array:** Retorna um objeto JSON no formato **TotvsResponse**, sendo que o resultado estará disponível no atributo **"items"**.<br>**- file:** Utilizado para indicar que a rota irá retornar um arquivo. Ver detalhes no tópico: **Configurando Rota para Tratamento de Arquivo**.<br>**Observações:**<br>- Caso não seja informado, será considerado **"object"**;<br>- Quando o tipo for **"object"**, será possível customizar o retorno (ver tópico: **Customizando o Response**).|```"object"```<br>OU<br>```"array"```<br>OU<br>```"file"```|
 |**database**|Não|Nome da Lista que contém os dados a serem pesquisados ou atualizados. Neste parâmetro pode ser informado o conteúdo "**database**", para utilizar o database padrão da entidade, ou o nome de um database  específico, neste caso, este database deverá ser definida como um novo parâmetro dentro do arquivo de configuração da entidade. Por exemplo, se for informado "db_block", no arquivo de configuração deverá existir um parâmetro com o seguinte nome e formato:<br>```"db_block": [ {object2}, {object2} ]```<br>**Observação:** Caso não seja informado, e o tipo da rota necessite de um **database**, a rota não irá retornar dados em uma pesquisa, e não irá guardar as informações em uma atualização.|Ex1:<br>```"db_block"```<br>Ex2:<br>```"database"```|
+
+**Configurando Script de Rota**
+
+É possível configurar uma Rota Customizada informando um programa desenvolvido em NodeJS, que será executado toda vez que a Rota receber uma Requisição. Este programa deve ser salvo na pasta **"data"** do projeto, e o seu nome, informado no parâmetro **script** da Rota.<br>
+Segue abaixo os tratamento conforme o método da Rota:<br>
+**Rotas com método GET**:<br>
+- O programa deverá ter uma função chamada **"get"**;
+- Esta função irá receber os seguintes parâmetros:
+
+|Parâmetro|Descrição|
+|--|--|
+|**paramPath**|Objeto com os parâmetros de Path da Requisição. Por exemplo, se o path da Rota for **"/:idCust/block"**, o conteúdo enviado na Requisição pode ser acessado da seguinte forma: **paramPath.idCust**.|
+|**queryParam**|Objeto com os parâmetros de Query enviados na Requisição. Por exemplo, se for realizada a requisição **/customer?search=Roberto**, o conteúdo pode ser acessado da seguinte forma: **queryParam.search**.|
+|**database**|Lista de dados que foram configurados no parâmetro **database** da Rota.|
+
+- A função poderá retornar um objeto com os seguintes parâmetros:
+
+|Parâmetro|Descrição|
+|--|--|
+|**statusCode**|Código de Status a ser retornado na Requisição (ex: 200, 404, 500). Se não for informado, será retornado **200**.|
+|**response**|Objeto de Response, retornado na Requisição. Se não for informado, será retornado um objeto vazio.|
+
+**Rotas com método POST**:<br>
+- O programa deverá ter uma função chamada **"post"**;
+
+|Parâmetro|Descrição|
+|--|--|
+|**paramPath**|Objeto com os parâmetros de Path da Requisição. Por exemplo, se o path da Rota for **"/:idCust/block"**, o conteúdo enviado na Requisição pode ser acessado da seguinte forma: **paramPath.idCust**.|
+|**queryParam**|Objeto com os parâmetros de Query enviados na Requisição. Por exemplo, se for realizada a requisição **/customer?search=Roberto**, o conteúdo pode ser acessado da seguinte forma: **queryParam.search**.|
+|**payload**|Objeto com as informações enviadas no Payload da Requisição.|
+|**database**|Lista de dados que foram configurados no parâmetro **database** da Rota.|
+
+- A função poderá retornar um objeto com os seguintes parâmetros:
+
+|Parâmetro|Descrição|
+|--|--|
+|**statusCode**|Código de Status a ser retornado na Requisição (ex: 200, 404, 500). Se não for informado, será retornado **200**.|
+|**response**|Objeto de Response, retornado na Requisição. Se não for informado, será retornado um objeto vazio.|
+|**database**|Lista de Dados que serão salvas no parâmetro **database** da Rota. Por exemplo, na Rota foi configurado um database que possui um registro de cliente. A função de "post" do script irá receber este database, se a função incluir um novo registro nele, e ele for retornado, este novo registro será salvo. Se este campo não for informado, as informações alteradas pela função não serão salvas.|
 
 **Configurando Rota para Tratamento de Arquivo**
 
@@ -108,8 +149,8 @@ O parâmetro **"fileParam"** é um objeto JSON, que possui os parâmetros descri
 
 |Parâmetro|Obrig?|Descrição|Exemplos|
 |--|--|--|--|
-|fileName|Não|Através deste parâmetro, é possível determinar o nome do arquivo recebido no **Upload**, isto é, qual será o nome do arquivo físico salvo no diretório parametrizado. Para isto, pode ser utilizado caracteres fixos e variáveis. Por exemplo, informando **"#file#-#today#"**, o nome será igual ao nome original, seguindo de um traço e a data de hoje.<br>As variáveis disponíveis são:<br>- **#file#**: Nome original do arquivo.<br>- **#today#**: Data atual, no formato: AAAA-MM-AA.<br>- **#now#**: Momento atual em milisegundos.<br>- **Um parâmetro da URL**: Se na rota customizada foi informado um parâmetro (ex: **:idCust**), este parâmetro pode ser utilizado para determinar o nome arquivo. Para isto, basta informar o nome do parâmetro entre **"#"** (ex: **#idCust#**).<br>**Observações:**<br>- Não deve ser informado a extensão do arquivo, ele será o mesmo do arquivo original;<br>- Quando este parâmetro não for informado, será utilizado o nome original do arquivo, enviado no **Upload**;<br>- Este parâmetro não é utilizado na **Devolução de Arquivos**.|Ex1:<br>```"#today#-#file#"```<br>Ex2:<br>```"#file#_#now#"```<br>Ex3:<br>```"arq_id#idCust#"```|
-|directory|Sim|Para Rotas de **Upload de Arquivos**, deve ser informado o Diretório onde serão salvos os arquivos recebidos. Para Rotas de **Devolução de Arquivos**, deve ser informado o Diretório onde estão fisicamente os arquivos.<br>O diretório pode ser **"completo"** (ex: **"C:/tmp/files/"**), ou **"relativo"**, neste caso, será uma sub-pasta dentro do projeto do Mock. Por exemplo, se for informato **"uploads/"**, e o mock estiver no diretório **"C:/THF/mock-totvs-builder/"**, o caminho considerado será: **"C:/THF/mock-totvs-builder/uploads/"**.<br>**Observação:** O diretório deve existir.|<br>Ex1:<br>```"C:/arquivos/upload/"```<br>Ex2:<br>```"files/"```|
+|**fileName**|Não|Através deste parâmetro, é possível determinar o nome do arquivo recebido no **Upload**, isto é, qual será o nome do arquivo físico salvo no diretório parametrizado. Para isto, pode ser utilizado caracteres fixos e variáveis. Por exemplo, informando **"#file#-#today#"**, o nome será igual ao nome original, seguindo de um traço e a data de hoje.<br>As variáveis disponíveis são:<br>- **#file#**: Nome original do arquivo.<br>- **#today#**: Data atual, no formato: AAAA-MM-AA.<br>- **#now#**: Momento atual em milissegundos.<br>- **Um parâmetro da URL**: Se na rota customizada foi informado um parâmetro (ex: **:idCust**), este parâmetro pode ser utilizado para determinar o nome arquivo. Para isto, basta informar o nome do parâmetro entre **"#"** (ex: **#idCust#**).<br>**Observações:**<br>- Não deve ser informado a extensão do arquivo, ele será o mesmo do arquivo original;<br>- Quando este parâmetro não for informado, será utilizado o nome original do arquivo, enviado no **Upload**;<br>- Este parâmetro não é utilizado na **Devolução de Arquivos**.|Ex1:<br>```"#today#-#file#"```<br>Ex2:<br>```"#file#_#now#"```<br>Ex3:<br>```"arq_id#idCust#"```|
+|**directory**|Sim|Para Rotas de **Upload de Arquivos**, deve ser informado o Diretório onde serão salvos os arquivos recebidos. Para Rotas de **Devolução de Arquivos**, deve ser informado o Diretório onde estão fisicamente os arquivos.<br>O diretório pode ser **"completo"** (ex: **"C:/tmp/files/"**), ou **"relativo"**, neste caso, será uma sub-pasta dentro do projeto do Mock. Por exemplo, se for informado **"uploads/"**, e o mock estiver no diretório **"C:/THF/mock-totvs-builder/"**, o caminho considerado será: **"C:/THF/mock-totvs-builder/uploads/"**.<br>**Observação:** O diretório deve existir.|<br>Ex1:<br>```"C:/arquivos/upload/"```<br>Ex2:<br>```"files/"```|
 
 **Customizando o Response**
 
@@ -125,79 +166,161 @@ Segue abaixo uma tabela com exemplos de rotas customizadas:
 |Rota|Descrição|
 |--|--|
 |**nextId**|Simula o retorno de uma informação específica. Neste exemplo, retorna o próximo código do cliente. Que foi configurado no database **"db_nextId"** como **12**.<br><br>Exemplo:<br>**Requisição:** ```GET /customer/nextId```<br>**Retorno:** ```{ "code": 12 }```|
-|**block**|Simula a execução de uma ação no BackEnd, que retorna uma informação ou erro, com base e um parâmetro enviado. Neste exemplo, simula o bloqueio de um cliente. O código do cliente é enviado como **PathParam** que foi configurado na rota como **":idParam"**, desta forma, a lista **"db_block"** configurada no **"database"** da rota é filtrada por este parâmetro, já que ele possui uma atributo com o mesmo nome.<br><br>Exemplo 1:<br>**Requisição:** ```POST /customer/1/block```<br>**Retorno:** StatusCode: ```200```<br><br>Exemplo 2:<br>**Requisição:** ```POST /customer/3/block```<br>**Retorno:** StatusCode: ```400``` - Erro: ```Não foi possível bloquear o cliente 3 !```<br><br>Exemplo 3:<br>**Requisição:** ```POST /customer/6/block```<br>**Retorno:** StatusCode: ```500``` - Erro: ```Usuário já está bloqueado !```|
+|**block**|Simula a execução de uma ação no BackEnd, que retorna uma informação ou erro, com base e um parâmetro enviado. Neste exemplo, simula o bloqueio de um cliente. O código do cliente é enviado como **PathParam** que foi configurado na rota como **":idParam"**, desta forma, a lista **"db_block"** configurada no **"database"** da rota é filtrada por este parâmetro, já que ele possui uma atributo com o mesmo nome. Neste exemplo, as informações do **"database"** não são alteradas, é  apenas uma simulação de retorno de erro.<br><br>Exemplo 1:<br>**Requisição:** ```POST /customer/1/block```<br>**Retorno:** StatusCode: ```200```<br><br>Exemplo 2:<br>**Requisição:** ```POST /customer/3/block```<br>**Retorno:** StatusCode: ```400``` - Erro: ```Não foi possível bloquear o cliente 3 !```<br><br>Exemplo 3:<br>**Requisição:** ```POST /customer/6/block```<br>**Retorno:** StatusCode: ```500``` - Erro: ```Usuário já está bloqueado !```|
 |**duplic**|Simula o envio de uma informação que é salva no banco dados. Neste exemplo, simula a duplicação de um cliente. Neste caso, é enviado no **Payload** os dados de um cliente, que é salvo no banco **"db_duplic"** que foi configurado no parâmetro **"database"** da rota.<br><br>Exemplo:<br>**Requisição:** ```POST /customer/3/duplic```<br>**Payload:** ```{ "code": 3, "shortName": "Adonias", "name": "Adonias Oliveira", "country": "USA", "status": 2 }```<br>**Ação:** A informação enviada no **Payload** será salva no parâmetro **"db_duplic"** do arquivo de configuração da entidade.|
+|**totalByStatus**|Simula uma Requisição que calcula a quantidade de Clientes por Status. Neste exemplo, é executada a função **"get"** do programa **customer.js**, que foi configurado no parâmetro **script**, para realizar o cálculo. A lista de cliente considerada será a **database**, que foi configurada no parâmetro **database**.<br><br>Exemplo:<br>**Requisição:** ```GET /customer/totBySatus```<br>**Retorno:** ```[ { "status": 2, "total": 2 }, { "status": 3, "total": 1 } ]```|
+|**changeStatus**|Simula a alteração de Status do Cliente. Neste exemplo, é executada a função **"post"** do programa **customer.js**, que foi configurado no parâmetro **script**, para realizar a alteração. O novo status será o enviado no **Payload** da Requisição. A lista de cliente considerada será a **database**, que foi configurada no parâmetro **database**.<br><br>Exemplo:<br>**Requisição:** ```POST /customer/3/changeStatus```<br>**Payload:** ```{ "status": 1 }```<br>**Ação:** O Status do Cliente **3** será alterado para **1** e alteração será salva na lista de cliente configurado no parâmetro **database**.|
 |**upload**|Simula o envio de arquivos via Upload, que são salvos fisicamente no diretório **"uploads/"** existente dentro do projeto do Mock, que foi configurado no parâmetro **"directory"**. As informações dos arquivos (nome, diretório, tamanho, etc...) são salvos no banco **"db_photo"**, que foi configurado no parâmetro **"database"** da rota. Ao salvar o arquivo no diretório, ele é renomado para conter também a data atual, conforme configurado no parâmetro **"fileName"**.<br><br>Exemplo:<br>**Requisição:** ```POST /customer/photo```<br>**Upload:** Arquivo: ```joao.jpg```<br>**Ação:** O arquivo será salvo no diretório: ```C:/THF/mock-totvs-builder/uploads/```, com o nome ```joao_2020-06-13.jpg```. E as informações do arquivo, serão salvas no parâmetro ```db_photo```.|
 |**image**|Simula a devolução de imagens para o FrontEnd, que estão fisicamente no diretório **"images/"** existente dentro do projeto do Mock, que foi configurado no parâmetro **"directory"**. Na requisição será enviado um **PathParam** com o nome da imagem, conforme configurado no parâmetro **"path"** (**:imageId**). No **response** será retornado o arquivo de imagem conforme configurado no parâmetro **"responseType"**.<br><br>Exemplo:<br>**Requisição:** ```GET /customer/photo/maria.jpg```<br>**Retorno:** Arquivo: ```maria.jpg```|
 
 **Configuração:**
+
+**Arquivo:** data/customer.json
 ```
-"customRoutes": [
-	{
-		"name": "nextId",
-		"method": "GET",
-		"path": "/nextId",
-		"responseType": "object",
-		"database": "db_nextId"
-	},
-	{
-		"name": "block",
-		"method": "POST",
-		"path": "/:idParam/block",
-		"responseType": "object",
-		"database": "db_block"
-	},
-	{
-		"name": "duplic",
-		"method": "POST",
-		"path": "/:idParam/duplic",
-		"database": "db_duplic"
-	},
-	{
-		"name": "upload",
-		"method": "POST",
-		"path": "/photo",
-		"fileParam": {
-			"fileName": "#file#_#today#",
-			"directory": "uploads/"
+{
+	"entityName": "customer",
+	"entityLabel": "Cliente",
+	"keys": [ "code" ],
+	"customRoutes": [
+		{
+			"name": "nextId",
+			"method": "GET",
+			"path": "/nextId",
+			"responseType": "object",
+			"database": "db_nextId"
 		},
-		"database": "db_photo"
-	},
-	{
-		"name": "image",
-		"method": "GET",
-		"path": "/photo/:imageId",
-		"fileParam": {
-			"directory": "images/"
+		{
+			"name": "block",
+			"method": "POST",
+			"path": "/:idParam/block",
+			"responseType": "object",
+			"database": "db_block"
 		},
-		"responseType": "file"
-	}
-],
-"db_nextId": [
-	{
-		"code": 12
-	}
-],
-"db_block": [
-	{
-		"idParam": 1,
-		"statusCodeResponse": 200
+		{
+			"name": "duplic",
+			"method": "POST",
+			"path": "/:idParam/duplic",
+			"database": "db_duplic"
+		},
+		{
+			"name": "totalByStatus",
+			"method": "GET",
+			"path": "/totBySatus",
+			"script": "customer.js",
+			"database": "database"
+		},
+		{
+			"name": "changeStatus",
+			"method": "POST",
+			"path": "/:idParam/changeStatus",
+			"script": "customer.js",
+			"database": "database"
+		},
+		{
+			"name": "upload",
+			"method": "POST",
+			"path": "/photo",
+			"fileParam": {
+				"fileName": "#file#_#today#",
+				"directory": "uploads/"
+			},
+			"database": "db_photo"
+		},
+		{
+			"name": "image",
+			"method": "GET",
+			"path": "/photo/:imageId",
+			"fileParam": {
+				"directory": "images/"
+			},
+			"responseType": "file"
+		}
+	],
+	"database": [
+		{
+			"code": 1,
+			"shortName": "João",
+			"name": "Joãozinho da Silva",
+			"country": "BRA",
+			"status": 2
+		},
+		{
+			"code": 2,
+			"shortName": "Maria",
+			"name": "Maria Barbosa",
+			"country": "BRA",
+			"status": 3
+		},
+		{
+			"code": 3,
+			"shortName": "Adonias",
+			"name": "Adonias Ribeiro",
+			"country": "BRA",
+			"status": 2
+		}
+	],
+	"db_nextId": [
+		{
+			"code": 12
+		}
+	],
+	"db_block": [
+		{
+			"idParam": 1,
+			"statusCodeResponse": 200
+		},
+		{
+			"idParam": 3,
+			"statusCodeResponse": 400,
+			"errorResponse": "Não foi possível bloquear o cliente 3 !"
+		},
+		{
+			"idParam": 6,
+			"statusCodeResponse": 500,
+			"errorResponse": "Usuário já está bloqueado !"
+		}
+	],
+	"db_duplic": [
+	],
+	"db_photo": [
+	]
+}
+```
+
+**Arquivo:** data/customer.js
+```
+module.exports = {
+
+	get(paramPath, queryParam, database) {
+		let totStatus = [];
+		database.forEach(customer => {
+			let status = totStatus.find(st => st.status === customer.status);
+			if (!status) {
+				totStatus.push({ status: customer.status, total: 1 });
+			} else {
+				status.total += 1;
+			}
+		});
+
+		return {
+			statusCode: 200,
+			response: { items: totStatus }
+		}
 	},
-	{
-		"idParam": 3,
-		"statusCodeResponse": 400,
-		"errorResponse": "Não foi possível bloquear o cliente 3 !"
-	},
-	{
-		"idParam": 6,
-		"statusCodeResponse": 500,
-		"errorResponse": "Usuário já está bloqueado !"
+
+	post(paramPath, queryParam, payload, database) {
+		let customer = database.find(cust => cust.code == paramPath.idParam);
+		if (customer) {
+			customer.status = payload.status;
+		}
+
+		return {
+			statusCode: 200,
+			response: {},
+			database: database
+		}
 	}
-],
-"db_duplic": [
-],
-"db_photo": [
-]
+};
 ```
 
 # Configurando Validações Customizadas
@@ -255,67 +378,114 @@ A execução das validações será realizada em momentos diferentes conforme o 
 Segue abaixo uma tabela com exemplos de validações customizadas:
 |Validação|Descrição|
 |--|--|
-|**vld_block**|Simula a validação para, não permitir alterar ou excluir um cliente que esteja bloqueado.<br>Será executada sobre os métodos **"PUT"** e **"DELETE"** conforme parametrizado em **"method"**.<br>Serão considerados os dados acessados no **database**, conforme parametrizado em "**from**".<br>Dos dados acessados, será considerado o campo **"status"** conforme parametrizado em **"field"**.<br>Para validação, será considerado como cliente bloqueado, quando o campo for igual a **"3"** (parametrizado em **"operation"** e **"value"**).<br>Se a validação for atendida, será retornada a mensagem de erro parametrizada em **"msgError"**.<br><br>Exemplo:<br>**Requisição:** ```DELETE /customer/10```<br>**Database:** ```{ "code": 10, "shortName": "Adonias", "name": "Adonias Oliveira", "status": 3 }```<br>**Retorno:** ```{ code: 400, message: 'Cliente está Bloqueado (status) !' }```|
+|**vld_block**|Simula a validação para, não permitir alterar ou excluir um cliente que esteja bloqueado.<br>Será executada sobre os métodos **"PUT"** e **"DELETE"** conforme parametrizado em **"method"**.<br>Serão considerados os dados acessados no **database**, conforme parametrizado em "**from**".<br>Dos dados acessados, será considerado o campo **"status"** conforme parametrizado em **"field"**.<br>Para validação, será considerado como cliente bloqueado, quando o campo for igual a **"3"** (parametrizado em **"operation"** e **"value"**).<br>Se a validação for atendida, será retornada a mensagem de erro parametrizada em **"msgError"**.<br><br>Exemplo:<br>**Requisição:** ```DELETE /customer/2```<br>**Retorno:** ```{ code: 400, message: 'Cliente está Bloqueado (status) !' }```|
 |**vld_big_code**|Simula a validação para, não permitir buscar clientes onde o código seja maior que 999.<br>Será executada sobre o método **"GET"** conforme parametrizado em **"method"**.<br>Serão considerados os dados enviados no **PathParam**, conforme parametrizado em "**from**".<br>Será considerado o parâmetro **"id"** do PathParam (parâmetro da Rota) conforme parametrizado em **"field"**.<br>Para validação, será verificado se o **id** é maior ou igual a **"999"** (parametrizado em **"operation"** e **"value"**).<br>Se a validação for atendida, será retornada a mensagem de erro parametrizada em **"msgError"**.<br><br>Exemplo:<br>**Requisição:** ```GET /customer/1923```<br>**Retorno:** ```{ code: 400, message: 'Código do cliente deve ser menor que 999 (id) !' }```|
 |**vld_prm_obr**|Simula a validação de campos obrigatórios em uma inclusão ou alteração.<br>Serão consideradas as rotas **"create"** e **"update"** conforme parametrizado em **"route"**.<br>Serão considerados os dados enviados no **Payload**, conforme parametrizado em "**from**".<br>Dos dados enviados, serão considerados os campos **"name"** e **"status"** conforme parametrizado em **"field"**.<br>Para validação, será verificado se os campos foram enviados e possuem um valor válido (**requered = true**), conforme parametrizado em **"operation"** e **"value"**.<br>Se a validação for atendida, será retornada a mensagem de erro parametrizada em **"msgError"**.<br><br>Exemplo:<br>**Requisição:** ```POST /customer```<br>**Payload:** ```{ "code": 10, "shortName": "Adonias", "status": 1 }```<br>**Retorno:** ```{ code: 400, message: 'Campos obrigatório (name) !' }```|
 
 **Configuração:**
+
+**Arquivo:** data/customer.json
 ```
-"customValidation": [
-	{
-		"name": "vld_block",
-		"method": [
-			"PUT",
-			"DELETE"
-		],
-		"from": [
-			"database"
-		],
-		"field": [
-			"status"
-		],
-		"operation": "=",
-		"value": 3,
-		"msgError": "Cliente está Bloqueado !"
-	},
-	{
-		"name": "vld_big_code",
-		"method": [
-			"GET"
-		],
-		"from": [
-			"pathParam"
-		],
-		"field": [
-			"id"
-		],
-		"operation": ">=",
-		"value": "999",
-		"msgError": "Código do cliente deve ser menor que 999 !"
-	},
-	{
-		"name": "vld_prm_obr",
-		"route": [
-			"create",
-			"update"
-		],
-		"from": [
-			"payload"
-		],
-		"field": [
-			"name",
-			"status"
-		],
-		"operation": "required",
-		"value": "true",
-		"msgError": "Campos obrigatório !"
-	}
-],
+{
+	"entityName": "customer",
+	"entityLabel": "Cliente",
+	"keys": [ "code" ],
+	"customValidation": [
+		{
+			"name": "vld_block",
+			"method": [ "PUT", "DELETE" ],
+			"from": [ "database" ],
+			"field": [ "status" ],
+			"operation": "=",
+			"value": 3,
+			"msgError": "Cliente está Bloqueado !"
+		},
+		{
+			"name": "vld_big_code",
+			"method": [ "GET" ],
+			"from": [ "pathParam" ],
+			"field": [ "id" ],
+			"operation": ">=",
+			"value": "999",
+			"msgError": "Código do cliente deve ser menor que 999 !"
+		},
+		{
+			"name": "vld_prm_obr",
+			"route": [ "create", "update" ],
+			"from": [ "payload" ],
+			"field": [ "name", "status" ],
+			"operation": "required",
+			"value": "true",
+			"msgError": "Campos obrigatório !"
+		}
+	],
+	"database": [
+		{
+			"code": 1,
+			"shortName": "João",
+			"name": "Joãozinho da Silva",
+			"country": "BRA",
+			"status": 2
+		},
+		{
+			"code": 2,
+			"shortName": "Maria",
+			"name": "Maria Barbosa",
+			"country": "BRA",
+			"status": 3
+		}
+	]
+}
 ```
 
-# Utilizando o Serviço
-- Utilize o projeto **"mock-totvs-builder-client"** para executar o **"mock-totvs-builder"**;
-- O projeto está disponível em:<br>https://github.com/ModernizaDatasul/mock-totvs-builder-client/
+# Executando o mock-totvs-builder
+Existe duas formas de executar o mock-totvs-builder, através de um projeto client, ou incorporando ao seu projeto.
+
+**Projeto mock-totvs-builder-client**
+
+Projeto utilizando para executar o mock-totvs-builder, desta forma, serão carregados duas seções do Visual Studio. Uma com o seu projeto e outro com o projeto do Mock.
+O mock-totvs-builder-client está disponível endereço abaixo, basta baixar o projeto e seguir o README.<br>
+https://github.com/ModernizaDatasul/mock-totvs-builder-client/
+
+**Incorporando ao seu Projeto**
+
+Para incorporar o mock-totvs-builder ao seu projeto, basta seguir os passos abaixo:
+
+1) Instalar o **mock-totvs-builder** e o **nodemon** (biblioteca que controla o reload do mock) no projeto, como uma dependência de Desenvolvimento, executando os comandos abaixo no terminal: 
+	```
+	npm install --save-dev mock-totvs-builder
+	npm install --save-dev nodemon@1
+	```
+
+2) Na pasta principal do seu projeto (mesma pasta onde está o **package.json**) criar um novo arquivo chamado **"start-mock.js"**, com o seguinte conteúdo:
+	```
+	// Inicializa o Mock
+	const mockServer = require('mock-totvs-builder');
+	const server = mockServer.startMock(__dirname);
+
+	// Carrega o Server
+	if (server) {
+		server.listen(3000, () => { console.log('Mock no AR, Porta: 3000'); });
+	} else {
+		console.log('Não foi possível carregar o Mock, verifique os arquivos de configuração (data) !');
+	```
+
+3) Nesta mesma pasta, criar um pasta chamada **"data"** onde deverão ser salvos os arquivos de configuração das Entidades, conforme descrito no início da documentação.
+
+4) Criar um atalho para execução do mock, para isto:
+	- Abrir o arquivo "package.json";
+	- Logo no início existe uma grupo chamado "scripts";
+	- incluir a linha: ```"mock": "nodemon start-mock",```   
+
+5) A utilização do Mock no projeto vai funcionar da seguinte forma:
+	- Com o seu Projeto aberto no Visual Studio, deverão ser abertos dois Terminais;
+	- Um será utilizado para carregar a sua aplicação e o outro para carregar o mock;
+	- Para carregar o mock, utilizar o comando: ```npm run mock```
+	- Deve aparecer a mensagem: "Mock no AR, Porta: 3000".
+
+6) Para verificar as entidades configuradas no mock, basta:
+	- Abrir um Navegador Web e acessar o endereço: http://localhost:3000/
+	- Deve aparecer: MOCK TOTVS BUILDER - No Ar !! e as Entidades configuradas.
 
 # Implementações Futuras
 - Validador do Arquivo de Configuração
@@ -323,5 +493,4 @@ Segue abaixo uma tabela com exemplos de validações customizadas:
 - Atributo auto incrementado
 - Variáveis no arquivo de configuração (ex: #today#)
 - Custom QueryParam (de-param query-param x atrib-entity, ou cria este atrib na entity)
-- Custom File (lógica customizada)
 - Edição Entidade Config via html.
