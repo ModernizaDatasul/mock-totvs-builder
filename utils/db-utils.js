@@ -19,6 +19,15 @@ module.exports = {
 
                     if (queryValue === 'ALL') { return true; }
 
+                    // QueryParam do tipo List (array)
+                    if (queryValue instanceof Array) {
+                        let queryValueList = [];
+                        queryValue.forEach(item => {
+                            queryValueList.push(item.toUpperCase());
+                        });
+                        return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
+                    }
+
                     if (typeof queryValue === 'string') {
 
                         // QueryParam do tipo Range
@@ -28,7 +37,7 @@ module.exports = {
                             return itemValue >= queryValueIni && itemValue <= queryValueFim;
                         }
 
-                        // QueryParam do tipo List
+                        // QueryParam do tipo List (virgula)
                         if (queryValue.indexOf(",") !== -1) {
                             let queryValueList = queryValue.split(",");
                             return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
