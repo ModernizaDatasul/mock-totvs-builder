@@ -43,6 +43,8 @@ module.exports = {
         res.write('  <th>entityName</th>');
         res.write('  <th>entityLabel</th>');
         res.write('  <th>keys</th>');
+        res.write('  <th style="text-align: center">keysSep</th>');
+        res.write('  <th>mainPath</th>');
         res.write('  <th>searchField</th>');
         res.write('  <th>base64Key</th>');
         res.write('  <th style="text-align: center">routes</th>');
@@ -57,7 +59,9 @@ module.exports = {
             res.write(' <tr>');
             res.write(`  <td>${entityCfg.entityName}</td>`);
             res.write(`  <td>${entityCfg.entityLabel || ''}</td>`);
-            res.write(`  <td>${JSON.stringify(entityCfg.keys)}</td>`);
+            res.write(`  <td>${JSON.stringify(entityCfg.keys)}</td>`);     
+            res.write(`  <td style="text-align: center">${entityCfg.keys.length > 1 ? entityCfg.keysSeparator || ';' : ''}</td>`);
+            res.write(`  <td>${entityCfg.mainPath || ''}</td>`);
             res.write(`  <td>${entityCfg.searchField || ''}</td>`);
             res.write(`  <td>${entityCfg.base64Key || false}</td>`);
             res.write('  <td style="text-align: center">');
@@ -86,7 +90,8 @@ module.exports = {
 
         entityRoutes.push({
             type: "CRUD", name: "query", method: "GET", path: "",
-            responseType: "array", database: "database"
+            responseType: "array", database: "database", 
+            queryCustomInf: JSON.stringify(entityCfg.queryCustomInf)
         });
 
         entityRoutes.push({
@@ -115,7 +120,8 @@ module.exports = {
                     type: "CUSTOM", name: customRoute.name, method: customRoute.method,
                     path: customRoute.path, script: customRoute.script,
                     fileParam: JSON.stringify(customRoute.fileParam),
-                    responseType: customRoute.responseType, database: customRoute.database
+                    responseType: customRoute.responseType, database: customRoute.database,
+                    queryCustomInf: JSON.stringify(customRoute.queryCustomInf)
                 });
             });
         }
@@ -129,6 +135,7 @@ module.exports = {
         res.write('  <th>script</th>');
         res.write('  <th>fileParam</th>');
         res.write('  <th>responseType</th>');
+        res.write('  <th>queryCustomInf</th>');
         res.write('  <th style="text-align: center">database</th>');
         res.write(' </tr>');
 
@@ -141,10 +148,11 @@ module.exports = {
             res.write(`  <td>${entityRoute.type}</td>`);
             res.write(`  <td>${entityRoute.name}</td>`);
             res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
-            res.write(`  <td>/${entityCfg.entityName}${entityRoute.path}</td>`);
+            res.write(`  <td>${entityCfg.mainPath}${entityRoute.path}</td>`);
             res.write(`  <td>${entityRoute.script || ''}</td>`);
             res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
             res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
+            res.write(`  <td>${entityRoute.queryCustomInf || ''}</td>`);
             res.write('  <td style="text-align: center">');
             if (entityRoute.database) {
                 res.write(`   <a href="${urlIndex}&database=${entityRoute.database}">`);

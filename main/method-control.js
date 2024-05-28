@@ -10,7 +10,7 @@ module.exports = {
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let response = this.applyAllQueryFilters(entityCfg.database, req, entityCfg.searchField);
+        let response = this.applyAllQueryFilters(entityCfg.database, req, entityCfg.searchField, entityCfg.queryCustomInf);
 
         return res.json(response);
     },
@@ -25,7 +25,7 @@ module.exports = {
         if (customVld) { return customVld; };
 
         const entityResponse = entityCfg.database.find((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
         if (!entityResponse) {
@@ -46,7 +46,7 @@ module.exports = {
         const entityDB = entityCfg.database;
         const newEntity = req.body;
 
-        const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys);
+        const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys, entityCfg.keysSeparator);
         if (!req.params) req["params"] = {};
         req.params["id"] = entityId;
 
@@ -54,7 +54,7 @@ module.exports = {
         if (customVld) { return customVld; };
 
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
         if (index !== -1) {
@@ -82,7 +82,7 @@ module.exports = {
 
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
         if (index === -1) {
@@ -117,7 +117,7 @@ module.exports = {
 
         const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityId);
+            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
         if (index === -1) {
@@ -148,7 +148,8 @@ module.exports = {
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req, entityCfg.searchField);
+            let queryCustomInf = customRoute.responseType == "array" ? customRoute.queryCustomInf : null;
+            response = this.applyAllQueryFilters(database, req, entityCfg.searchField, queryCustomInf);
 
             customVld = this.customValidationDatabase('GET', customRoute.name, response.items, res, entityCfg);
             if (customVld) { return customVld; };
@@ -247,7 +248,7 @@ module.exports = {
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req, entityCfg.searchField);
+            response = this.applyAllQueryFilters(database, req, entityCfg.searchField, null);
 
             if (req.body && Object.keys(req.body).length > 0) {
                 entityCfg[customRoute.database].push(req.body);
@@ -455,13 +456,15 @@ module.exports = {
             `${custVld.msgError} (${field}). customValidation: ${custVld.name}.`);
     },
 
-    getEntityKeyValue(entity, entityKeys) {
+    getEntityKeyValue(entity, entityKeys, keysSeparator) {
         let listValues = [];
         entityKeys.forEach(entityKey => {
             listValues.push(entity[entityKey]);
         });
 
-        let entityKeyValue = listValues.join(";");
+        if (!keysSeparator) { keysSeparator = ";"; }
+
+        let entityKeyValue = listValues.join(keysSeparator);
 
         if (typeof entityKeyValue === 'string') {
             entityKeyValue = entityKeyValue.toUpperCase();
@@ -469,17 +472,17 @@ module.exports = {
         return entityKeyValue;
     },
 
-    entityKeyCompare(entity, entityKeys, id) {
+    entityKeyCompare(entity, entityKeys, keysSeparator, id) {
         if (typeof id === 'string') {
             id = id.toUpperCase();
         }
 
-        const entityKeyValue = this.getEntityKeyValue(entity, entityKeys);
+        const entityKeyValue = this.getEntityKeyValue(entity, entityKeys, keysSeparator);
 
         return entityKeyValue == id; // o "tipo" pode diferente, então usa "==" 
     },
 
-    applyAllQueryFilters(dbConfig, req, searchField) {
+    applyAllQueryFilters(dbConfig, req, searchField, queryCustomInf) {
         let database = genUts.copyArray(dbConfig);
         let fromTo = (searchField) ? { search: searchField } : null;
 
@@ -494,11 +497,15 @@ module.exports = {
 
         if (order) { dbUts.applyOrder(entitiesResponse, order); }
 
-        return {
+        let returnResponse = {
             items: entitiesResponse,
             hasNext: database.length > (page * pageSize),
             total: entitiesResponse.length
         }
+
+        if (queryCustomInf) { returnResponse = { ...returnResponse, ...queryCustomInf }; }
+
+        return returnResponse;
     },
 
     makeCustomResponse(res, customRoute, response) {

@@ -40,8 +40,18 @@ module.exports = {
     },
 
     validEntitiesData(entitiesData) {
+        if (!entitiesData) { return false; }
 
-        // Em desenvolvimento - Fazer a validação os arquivos
+        entitiesData.forEach(entityData => {
+            if (entityData.config) {
+                if (!entityData.config.mainPath) {
+                    entityData.config.mainPath = "/" + entityData.config.entityName;
+                }
+            }
+
+            // Em desenvolvimento - Fazer a validação os arquivos
+
+        });
 
         return true;
     },
@@ -64,7 +74,7 @@ module.exports = {
     },
 
     makeCRUDRoute(app, fileName, entityCfg) {
-        const entityPath = "/" + entityCfg.entityName;
+        const entityPath = entityCfg.mainPath;
 
         app.get(entityPath, function (req, res) {
             return methodCtrl.query(req, res, entityCfg);
@@ -92,7 +102,7 @@ module.exports = {
         if (entityCfg.customRoutes.length === 0) { return; }
 
         entityCfg.customRoutes.forEach(customRoute => {
-            const customPath = `/${entityCfg.entityName}${customRoute.path}`;
+            const customPath = `${entityCfg.mainPath}${customRoute.path}`;
 
             switch (customRoute.method.toUpperCase()) {
                 case 'GET':
