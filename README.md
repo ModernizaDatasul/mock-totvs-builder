@@ -99,11 +99,11 @@ Esta configuração é utilizada para quando a entidade possui filhos e eles sã
 Ao realizar esta configuração, serão criadas automaticamente as Rotas para busca e manipulação dos filhos da entidade. As rotas e regras utilizadas, serão as mesmas utilizadas nas rotas pré-definidas da entidade (ver tópico: **Rotas Pré-definidas**), sendo que, o **Path** seguirá o padrão conforme abaixo:
 |Rota|Path|
 |--|--|
-|**query**|/entidade/:idEntidade/filho|
-|**get**|/entidade/:idEntidade/filho/:idFilho|
-|**create**|/entidade/:idEntidade/filho|
-|**update**|/entidade/:idEntidade/filho/:idFilho|
-|**delete**|/entidade/:idEntidade/filho/:idFilho|
+|**query**|```/entidade/:idEntidade/filho```|
+|**get**|```/entidade/:idEntidade/filho/:idFilho```|
+|**create**|```/entidade/:idEntidade/filho```|
+|**update**|```/entidade/:idEntidade/filho/:idFilho```|
+|**delete**|```/entidade/:idEntidade/filho/:idFilho```|
 
 Para realizar a configuração dos filhos, basta incluir o parâmetro **"children"** no arquivo de configuração da Entidade e incluir a lista de filhos. Cada filho, deve respeitar a configuração conforme tabela abaixo:
 |Parâmetro|Obrig?|Descrição|Exemplo|
