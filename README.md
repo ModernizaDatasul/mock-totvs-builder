@@ -19,6 +19,7 @@ Para cada entidade, deverá existir um arquivo de configuração no formato **"J
 |**mainPath**|Não|Path principal para acesso a entidade. Caso não seja informado, será considerado: **"/" + entityName**|Ex1:<br>```/customer```<br>Ex2:<br>```/api/cdp/v1/customer```|
 |**searchField**|Não|Nome do campo que será utilizado para consulta padrão, quando for realizada uma requisição com o QueryParam **"search"**. Por exemplo, se for realizada a requisição: **"GET /customer?search=Roberto"**, os dados serão filtrados pelos registros onde a string **"Roberto"** esteja no conteúdo do campo informado neste parâmetro.|```"shortName"```|
 |**base64Key**|Não|Indica se a chave da entidade é enviada em Base64 nas requisições de GET, PUT e DELETE. Caso afirmativo, a chave recebida será convertida **(base64 decode)** antes de realizar a busca da entidade. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
+|**children**|Não|Lista de filhos da entidade. Utilizado para quando a entidade possui filhos diretos alinhados (que fazem parte da estrutura da entidade).<br>Para mais detalhes e configuração, verificar o tópico: **Configurando Filhos da Entidade**.|```[{"entityName": "contacts", "entityLabel": "Contato", "keys": ["seq"]},```<br>```{"entityName": "bankAccount", "base64Key": true, "keys": ["bank", "account"]}]```|
 |**customRoutes**|Não|Lista de Rotas customizadas. Utilizado para quando as rotas padrões (ver tópico: **Rotas Pré-definidas**) não atendem.<br>Para configurar as rotas, verificar o tópico: **Configurando Rotas Customizadas**.|```[{"name": "nextId", "method": "GET", "path": "/nextId", "database": "db_nextId"},```<br>```{"name": "block", "method": "POST", "path": "/:idParam/block", "database": "db_block"}]```|
 |**customValidation**|Não|Lista de Validações customizadas. Utilizado para simular erros/validações executadas pelo BackEnd.<br>Para configurar as validações, verificar o tópico: **Configurando Validações Customizadas**.|```[{"name": "vld_block","method": ["DELETE"],"from": ["payload","database"],"field": ["status"],"operation": "=","value": 3,"msgError": "Cliente está Bloqueado !"}]```|
 |**database**|Sim|Registros da Entidade, contendo a entidade completa, com todos os atributos necessários.|```[{"company": 10, "code": 1, "shortName": "João", "name": "Joãozinho Maria da Silva" },```<br>```{"company": 10, "code": 2, "shortName": "Maria", "name": "Maria Barbosa"}]```|
@@ -80,6 +81,63 @@ Ao fazer uma requisição, permite enviar **QueryParams** pré-definidos para fi
 |**Filtro (Lista - Tipo 2)**<br>(atributo=val1&atributo=valN)|Realiza o filtro considerando uma lista. Neste caso, os valores devem ser enviados repetindo-se o **QueryParam** para cada item da lista.|```/customer?country=BRA&country=USA&country=ARG```|
 |**Seleção de Atributos**<br>(fields)|Permite indicar quais atributos da entidade devem ser retornados. Para isto, deve ser enviado o **QueryParam** **"fields"** com a lista de atributos. Caso não seja enviado, retorna todos os atributos da entidade.|```/customer?fields=code,name```|
 |**Ordenação**<br>(order)|Permite indicar um atributo para realizar a ordenação dos dados retornados. Para isto, deve ser enviado o **QueryParam** **"order"** com o nome do atributo. Utilizar o caracter **'-'** na frente do atributo para indicar que a ordenação seja descendente. Caso não seja enviado, os dados serão retornados na ordem em que estiver no arquivo de configuração da entidade.|```/customer?order=name```|
+
+# Configurando Filhos da Entidade
+Esta configuração é utilizada para quando a entidade possui filhos e eles são alinhados, fazendo parte da estrutura da entidade, isto é, a lista de filhos esta dentro da entidade em um atributo do tipo **array**. Por exemplo, a entidade **customer** possui um atributo array chamado **contacts** e nele está a lista de contatos, conforme exemplo abaixo:
+```
+{
+	"code": 1,
+	"shortName": "João",
+	"contacts": [
+		{
+			"seq": 1,
+			"name": "Joaquim"
+		}
+	]
+}
+```
+Ao realizar esta configuração, serão criadas automaticamente as Rotas para busca e manipulação dos filhos da entidade. As rotas e regras utilizadas, serão as mesmas utilizadas nas rotas pré-definidas da entidade (ver tópico: **Rotas Pré-definidas**), sendo que, o **Path** seguirá o padrão conforme abaixo:
+|Rota|Path|
+|--|--|
+|**query**|/entidade/:idEntidade/filho|
+|**get**|/entidade/:idEntidade/filho/:idFilho|
+|**create**|/entidade/:idEntidade/filho|
+|**update**|/entidade/:idEntidade/filho/:idFilho|
+|**delete**|/entidade/:idEntidade/filho/:idFilho|
+
+Para realizar a configuração dos filhos, basta incluir o parâmetro **"children"** no arquivo de configuração da Entidade e incluir a lista de filhos. Cada filho, deve respeitar a configuração conforme tabela abaixo:
+|Parâmetro|Obrig?|Descrição|Exemplo|
+|--|--|--|--|
+|**entityName**|Sim|Nome do filho, que será utilizado para roteamento.<br>**Observação**: O nome deve ser único, isto é, não deve existir outro filho da mesma entidade com o mesmo nome.|```"contact"```|
+|**entityLabel**|Não|Descrição do filho, que será apresentada nas mensagens de erro.<br>Quando não informado, será utilizado **entityName**.|```"Contato"```|
+|**property**|Não|Nome do atributo da entidade que possui a lista do filho.<br>Quando não informado, será utilizado **entityName**.|```"contacts"```|
+|**keys**|Sim|Lista de atributos que fazem parte da chave única do filho (desconsiderando a chave da entidade).<br>Quando a chave for composta, os atributos devem estar na ordem esperada.|Ex1 (chave simples):<br>```["seq"]```<br>Ex2 (chave composta):<br>```["bank","account"]```|
+|**keysSeparator**|Não|Caracter que será utilizado para concatenar as chaves do filho durante a busca de dados (get, update, delete), quando ele utilizar chave composta. O caracter deve corresponder ao que já é utilizado atualmente pelo FrontEnd para busca de dados. Por exemplo, para buscar o registro o FrontEnd dispara a requisição: ```/customer/1/bankAccount/001\|31232```, desta forma, o caracter utilizado para separar as chaves foi o pipe (**"\|"**), portanto este caracter deve ser utilizado neste parâmetro.<br>Se não for informado, será utilizado o caracter ponto-e-vírgula (**";"**) |Ex1:<br>```;```<br>Ex2:<br>```\|```|
+|**base64Key**|Não|Indica se a chave do filho é enviada em Base64 nas requisições de GET, PUT e DELETE. Caso afirmativo, a chave recebida será convertida **(base64 decode)** antes de realizar a busca da entidade. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
+
+**Exemplo Configuração:**
+
+**Arquivo:** data/customer.json
+```
+{
+	"entityName": "customer",
+	"entityLabel": "Cliente",
+	"keys": [ "code" ],
+	"children": [
+		{
+			"entityName": "contact",
+			"entityLabel": "Contato",
+			"property": "contacts",
+			"keys": [ "seq" ]
+		},
+		{
+			"entityName": "bankAccount",
+			"base64Key": true,
+			"keys": [ "bank", "account" ]
+		}
+	]
+}
+```
 
 # Configurando Rotas Customizadas
 Quando as rotas padrões pré-definidas não atendem, é possível configurar novas rotas. Para isto, basta incluir o parâmetro **"customRoutes"** no arquivo de configuração da Entidade e incluir a lista de rotas. Cada rota, deve respeitar a configuração conforme tabela abaixo:

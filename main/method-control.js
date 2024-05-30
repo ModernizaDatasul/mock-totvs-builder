@@ -4,51 +4,76 @@ const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
 
-    query(req, res, entityCfg) {
-        this.logRequest('GET (query)', req);
+    query(req, res, mainEntityCfg, type, entityName) {
+        this.logRequest(type, entityName, 'GET (query)', req);
+
+        let entityCfg = mainEntityCfg;
+        let entityDB = entityCfg.database;
+
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+            entityDB = childrenCfg.database;
+        }
 
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let response = this.applyAllQueryFilters(entityCfg.database, req, entityCfg.searchField, entityCfg.queryCustomInf);
+        let response = this.applyAllQueryFilters(entityDB, req, entityCfg.searchField, entityCfg.queryCustomInf);
 
         return res.json(response);
     },
 
-    get(req, res, entityCfg) {
-        this.logRequest('GET', req);
+    get(req, res, mainEntityCfg, type, entityName) {
+        this.logRequest(type, entityName, 'GET', req);
 
-        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
-        let entityId = req.params.id;
+        let entityCfg = mainEntityCfg;
+        let entityDB = entityCfg.database;
 
-        let customVld = this.customValidationParams('GET', 'get', req, res, entityCfg);
-        if (customVld) { return customVld; };
-
-        const entityResponse = entityCfg.database.find((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
-        });
-
-        if (!entityResponse) {
-            return res.status(400).json(
-                { error: `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${entityId}.` }
-            );
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+            entityDB = childrenCfg.database;
         }
 
-        customVld = this.customValidationDatabase('GET', 'get', entityResponse, res, entityCfg);
-        if (customVld) { return customVld; };
+        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, type, entityDB);
+        if (typeof (index) !== 'number') {
+            return index;
+        }
 
-        return res.json(entityResponse);
+        return res.json(entityDB[index]);
     },
 
-    create(req, res, entityCfg, fileName) {
-        this.logRequest('POST (create)', req);
+    create(req, res, mainEntityCfg, fileName, type, entityName) {
+        this.logRequest(type, entityName, 'POST (create)', req);
 
-        const entityDB = entityCfg.database;
+        let entityCfg = mainEntityCfg;
+        let entityDB = entityCfg.database;
+
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+            entityDB = childrenCfg.database;
+        }
+
         const newEntity = req.body;
 
         const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys, entityCfg.keysSeparator);
         if (!req.params) req["params"] = {};
-        req.params["id"] = entityId;
+        if (type === "CHILDREN") {
+            req.params["idSon"] = entityId;
+        } else {
+            req.params["id"] = entityId;
+        }
 
         let customVld = this.customValidationParams('POST', 'create', req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -66,34 +91,30 @@ module.exports = {
 
         entityDB.push(newEntity);
 
-        fileUts.saveFile(fileName, entityCfg);
+        fileUts.saveFile(fileName, mainEntityCfg);
 
         return res.json(newEntity);
     },
 
-    update(req, res, entityCfg, fileName) {
-        this.logRequest('PUT (update)', req);
+    update(req, res, mainEntityCfg, fileName, type, entityName) {
+        this.logRequest(type, entityName, 'PUT (update)', req);
 
-        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
-        let entityId = req.params.id;
+        let entityCfg = mainEntityCfg;
+        let entityDB = entityCfg.database;
 
-        let customVld = this.customValidationParams('PUT', 'update', req, res, entityCfg);
-        if (customVld) { return customVld; };
-
-        const entityDB = entityCfg.database;
-        const index = entityDB.findIndex((entity) => {
-            return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
-        });
-
-        if (index === -1) {
-            return res.status(400).json(
-                this.errorBuilderReturn([this.errorBuilder(400,
-                    `${entityCfg.entityLabel || entityCfg.entityName} não encontrado com o código ${entityId}.`)])
-            );
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+            entityDB = childrenCfg.database;
         }
 
-        customVld = this.customValidationDatabase('PUT', 'update', entityDB[index], res, entityCfg);
-        if (customVld) { return customVld; };
+        const index = this.getRecordIndex('PUT', 'update', req, res, entityCfg, type, entityDB);
+        if (typeof (index) !== 'number') {
+            return index;
+        }
 
         Object.keys(req.body).forEach((property) => {
             if (!entityCfg.keys.includes(property)) {
@@ -101,21 +122,76 @@ module.exports = {
             }
         });
 
-        fileUts.saveFile(fileName, entityCfg);
+        fileUts.saveFile(fileName, mainEntityCfg);
 
         return res.json(entityDB[index]);
     },
 
-    delete(req, res, entityCfg, fileName) {
-        this.logRequest('DELETE', req);
+    delete(req, res, mainEntityCfg, fileName, type, entityName) {
+        this.logRequest(type, entityName, 'DELETE', req);
 
-        if (entityCfg.base64Key) { req.params.id = genUts.atob(req.params.id); }
+        let entityCfg = mainEntityCfg;
+        let entityDB = entityCfg.database;
+
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+            entityDB = childrenCfg.database;
+        }
+
+        const index = this.getRecordIndex('DELETE', 'delete', req, res, entityCfg, type, entityDB);
+        if (typeof (index) !== 'number') {
+            return index;
+        }
+
+        entityDB.splice(index, 1);
+
+        fileUts.saveFile(fileName, mainEntityCfg);
+
+        return res.json({
+            message: `${entityCfg.entityLabel || entityCfg.entityName} removido com sucesso !`
+        });
+    },
+
+    getChildrenCfg(req, res, entityCfg, entityName, entityDB) {
+
+        // Busca o Pai
+        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, "FATHER", entityDB);
+        if (typeof (index) !== 'number') {
+            return index;
+        }
+        let entityFather = entityDB[index];
+
+        let childrenCfgOrig = entityCfg.children.find((entity) => {
+            return entity.entityName === entityName;
+        });
+
+        var childrenCfg = { ...childrenCfgOrig }
+
+        childrenCfg["isChildrenCfg"] = true;
+
+        let property = childrenCfg.property;
+        if (!property) { property = childrenCfg.entityName; }
+
+        if (!entityFather[property]) { entityFather[property] = []; }
+        childrenCfg["database"] = entityFather[property];
+
+        return childrenCfg;
+    },
+
+    getRecordIndex(method, route, req, res, entityCfg, type, entityDB) {
         let entityId = req.params.id;
+        if (type === "FATHER") { entityId = req.params.idFather; }
+        if (type === "CHILDREN") { entityId = req.params.idSon; }
 
-        let customVld = this.customValidationParams('DELETE', 'delete', req, res, entityCfg);
+        if (entityCfg.base64Key) { entityId = genUts.atob(entityId); }
+
+        let customVld = this.customValidationParams(method, route, req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        const entityDB = entityCfg.database;
         const index = entityDB.findIndex((entity) => {
             return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
@@ -127,20 +203,14 @@ module.exports = {
             );
         }
 
-        customVld = this.customValidationDatabase('DELETE', 'delete', entityDB[index], res, entityCfg);
+        customVld = this.customValidationDatabase(method, route, entityDB[index], res, entityCfg);
         if (customVld) { return customVld; };
 
-        entityDB.splice(index, 1);
-
-        fileUts.saveFile(fileName, entityCfg);
-
-        return res.json({
-            message: `${entityCfg.entityLabel || entityCfg.entityName} removido com sucesso !`
-        });
+        return index;
     },
 
     customGet(req, res, entityCfg, customRoute) {
-        this.logRequest(`GET (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "GET", req);
 
         let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -159,7 +229,7 @@ module.exports = {
     },
 
     customGetScript(req, res, entityCfg, customRoute, projRootDir) {
-        this.logRequest(`GET (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "GET (Script)", req);
 
         let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -198,7 +268,7 @@ module.exports = {
     },
 
     customGetFile(req, res, entityCfg, customRoute) {
-        this.logRequest(`GET (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "GET (File)", req);
 
         let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -240,7 +310,7 @@ module.exports = {
     },
 
     customPost(req, res, entityCfg, fileName, customRoute) {
-        this.logRequest(`POST (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "POST", req);
 
         let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -263,7 +333,7 @@ module.exports = {
     },
 
     customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir) {
-        this.logRequest(`POST (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "POST (Script)", req);
 
         let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -306,7 +376,7 @@ module.exports = {
     },
 
     customPostUpload(req, res, entityCfg, fileName, customRoute) {
-        this.logRequest(`POST (${customRoute.name})`, req);
+        this.logRequest("CUSTOM", customRoute.name, "POST (Upload)", req);
 
         let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -531,9 +601,11 @@ module.exports = {
         }
     },
 
-    logRequest(method, req) {
+    logRequest(type, entityName, method, req) {
         console.log(
             new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''),
+            '-', type,
+            '-', entityName,
             '-', method,
             '- Path:', req.path,
             '- qryPrms:', req.query

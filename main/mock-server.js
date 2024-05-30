@@ -63,6 +63,7 @@ module.exports = {
         // Configura as Rotas para cada Entidade
         entitiesData.forEach(entityData => {
             this.makeCustomRoute(app, projRootDir, entityData.fileName, entityData.config);
+            this.makeCHILDRENRoute(app, entityData.fileName, entityData.config);
             this.makeCRUDRoute(app, entityData.fileName, entityData.config);
         });
     },
@@ -74,26 +75,41 @@ module.exports = {
     },
 
     makeCRUDRoute(app, fileName, entityCfg) {
-        const entityPath = entityCfg.mainPath;
+        this.makeDefaultRoute(app, fileName, entityCfg, entityCfg.mainPath, "CRUD", entityCfg.entityName);
+    },
+
+    makeCHILDRENRoute(app, fileName, entityCfg) {
+        if (!entityCfg.children) { return; }
+        if (entityCfg.children.length === 0) { return; }
+
+        entityCfg.children.forEach((children) => {
+            let entityPath = entityCfg.mainPath + "/:idFather/" + children.entityName;
+            this.makeDefaultRoute(app, fileName, entityCfg, entityPath, "CHILDREN", children.entityName);
+        });
+    },
+
+    makeDefaultRoute(app, fileName, entityCfg, entityPath, type, entityName) {
+        let idParam = '/:id';
+        if (type === "CHILDREN") { idParam = '/:idSon' }
 
         app.get(entityPath, function (req, res) {
-            return methodCtrl.query(req, res, entityCfg);
+            return methodCtrl.query(req, res, entityCfg, type, entityName);
         });
 
-        app.get(entityPath + '/:id', function (req, res) {
-            return methodCtrl.get(req, res, entityCfg);
+        app.get(entityPath + idParam, function (req, res) {
+            return methodCtrl.get(req, res, entityCfg, type, entityName);
         });
 
         app.post(entityPath, function (req, res) {
-            return methodCtrl.create(req, res, entityCfg, fileName);
+            return methodCtrl.create(req, res, entityCfg, fileName, type, entityName);
         });
 
-        app.put(entityPath + '/:id', function (req, res) {
-            return methodCtrl.update(req, res, entityCfg, fileName);
+        app.put(entityPath + idParam, function (req, res) {
+            return methodCtrl.update(req, res, entityCfg, fileName, type, entityName);
         });
 
-        app.delete(entityPath + '/:id', function (req, res) {
-            return methodCtrl.delete(req, res, entityCfg, fileName);
+        app.delete(entityPath + idParam, function (req, res) {
+            return methodCtrl.delete(req, res, entityCfg, fileName, type, entityName);
         });
     },
 
