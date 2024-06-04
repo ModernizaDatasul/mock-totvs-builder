@@ -22,7 +22,7 @@ module.exports = {
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let response = this.applyAllQueryFilters(entityDB, req, entityCfg.searchField, entityCfg.queryCustomInf);
+        let response = this.applyAllQueryFilters(entityDB, req, entityCfg.customSearchFields, entityCfg.queryCustomInf);
 
         return res.json(response);
     },
@@ -219,7 +219,7 @@ module.exports = {
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
             let queryCustomInf = customRoute.responseType == "array" ? customRoute.queryCustomInf : null;
-            response = this.applyAllQueryFilters(database, req, entityCfg.searchField, queryCustomInf);
+            response = this.applyAllQueryFilters(database, req, entityCfg.customSearchFields, queryCustomInf);
 
             customVld = this.customValidationDatabase('GET', customRoute.name, response.items, res, entityCfg);
             if (customVld) { return customVld; };
@@ -318,7 +318,7 @@ module.exports = {
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req, entityCfg.searchField, null);
+            response = this.applyAllQueryFilters(database, req, entityCfg.customSearchFields, null);
 
             if (req.body && Object.keys(req.body).length > 0) {
                 entityCfg[customRoute.database].push(req.body);
@@ -552,13 +552,12 @@ module.exports = {
         return entityKeyValue == id; // o "tipo" pode diferente, então usa "==" 
     },
 
-    applyAllQueryFilters(dbConfig, req, searchField, queryCustomInf) {
+    applyAllQueryFilters(dbConfig, req, customSearchFields, queryCustomInf) {
         let database = genUts.copyArray(dbConfig);
-        let fromTo = (searchField) ? { search: searchField } : null;
 
-        if (req.params) { database = dbUts.applyQueryFilter(database, req.params, fromTo); }
+        if (req.params) { database = dbUts.applyQueryFilter(database, req.params, customSearchFields); }
 
-        if (req.query) { database = dbUts.applyQueryFilter(database, req.query, fromTo); }
+        if (req.query) { database = dbUts.applyQueryFilter(database, req.query, customSearchFields); }
 
         const { pageSize = 20, page = 1, order, fields } = req.query;
         const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);

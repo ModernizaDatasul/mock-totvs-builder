@@ -47,6 +47,12 @@ module.exports = {
                 if (!entityData.config.mainPath) {
                     entityData.config.mainPath = "/" + entityData.config.entityName;
                 }
+
+                // Tratamento de Parâmetro descontinuado
+                if (entityData.config.searchField) {
+                    if (!entityData.config.customSearchFields) { entityData.config.customSearchFields = {}; }
+                    entityData.config.customSearchFields["search"] = entityData.config.searchField;
+                }
             }
 
             // Em desenvolvimento - Fazer a validação os arquivos

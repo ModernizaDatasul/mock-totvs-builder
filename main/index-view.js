@@ -45,7 +45,7 @@ module.exports = {
         res.write('  <th>keys</th>');
         res.write('  <th style="text-align: center">keysSep</th>');
         res.write('  <th>mainPath</th>');
-        res.write('  <th>searchField</th>');
+        res.write('  <th>custSearchFld</th>');
         res.write('  <th>base64Key</th>');
         res.write('  <th style="text-align: center">children</th>');
         res.write('  <th style="text-align: center">routes</th>');
@@ -68,7 +68,7 @@ module.exports = {
             res.write(`  <td>${JSON.stringify(entityCfg.keys)}</td>`);
             res.write(`  <td style="text-align: center">${entityCfg.keys.length > 1 ? entityCfg.keysSeparator || ';' : ''}</td>`);
             res.write(`  <td>${entityCfg.mainPath || ''}</td>`);
-            res.write(`  <td>${entityCfg.searchField || ''}</td>`);
+            res.write(`  <td>${JSON.stringify(entityCfg.customSearchFields) || ''}</td>`);
             res.write(`  <td>${entityCfg.base64Key || false}</td>`);
             res.write('  <td style="text-align: center">');
             res.write(`   <a href="${urlIndex}&config=children">`);
