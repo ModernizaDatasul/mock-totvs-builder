@@ -277,7 +277,7 @@ module.exports = {
         if (customRoute.fileParam && customRoute.fileParam.fileName) {
             fileName = fileUts.makeFileName(customRoute.fileParam.fileName, null, req.params);
         }
-        
+
         if (!fileName) {
             return res.status(404).json(
                 this.errorBuilderReturn([this.errorBuilder(404, 'O nome do Arquivo deve ser informado na configuração da Rota !')])
@@ -320,12 +320,12 @@ module.exports = {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
             response = this.applyAllQueryFilters(database, req, entityCfg.customSearchFields, null);
 
-            if (req.body && Object.keys(req.body).length > 0) {
+            customVld = this.customValidationDatabase('POST', customRoute.name, response.items, res, entityCfg);
+            if (customVld) { return customVld; };
+
+            if (customRoute.savePayload && req.body && Object.keys(req.body).length > 0) {
                 entityCfg[customRoute.database].push(req.body);
                 fileUts.saveFile(fileName, entityCfg);
-            } else {
-                customVld = this.customValidationDatabase('POST', customRoute.name, response.items, res, entityCfg);
-                if (customVld) { return customVld; };
             }
         }
 
@@ -558,6 +558,8 @@ module.exports = {
         if (req.params) { database = dbUts.applyQueryFilter(database, req.params, customSearchFields); }
 
         if (req.query) { database = dbUts.applyQueryFilter(database, req.query, customSearchFields); }
+
+        if (req.body) { database = dbUts.applyQueryFilter(database, req.body, customSearchFields); }
 
         const { pageSize = 20, page = 1, order, fields } = req.query;
         const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);

@@ -55,6 +55,10 @@ module.exports = {
                         return false;
                     }
 
+                    if (queryValue instanceof Object) {
+                        return JSON.stringify(itemValue) === JSON.stringify(queryValue);
+                    } 
+
                     return itemValue == queryValue; // O tipo pode ser diferente então usa ==
                 });
             }

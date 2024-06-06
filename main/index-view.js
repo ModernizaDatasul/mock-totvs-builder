@@ -46,7 +46,7 @@ module.exports = {
         res.write('  <th style="text-align: center">keysSep</th>');
         res.write('  <th>mainPath</th>');
         res.write('  <th>custSearchFld</th>');
-        res.write('  <th>base64Key</th>');
+        res.write('  <th>b64Key</th>');
         res.write('  <th style="text-align: center">children</th>');
         res.write('  <th style="text-align: center">routes</th>');
         res.write('  <th style="text-align: center">customVld</th>');
@@ -99,19 +99,19 @@ module.exports = {
     showRoutes(req, res, entityCfg) {
         const entityRoutes = [];
 
-        this.addRouteDefault(entityRoutes, "CRUD", "query", "GET", "", "array", JSON.stringify(entityCfg.queryCustomInf));
-        this.addRouteDefault(entityRoutes, "CRUD", "get", "GET", "/:id", "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "create", "POST", "", "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "update", "PUT", "/:id", "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "delete", "DELETE", "/:id", "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "query", "GET", "", false, "array", JSON.stringify(entityCfg.queryCustomInf));
+        this.addRouteDefault(entityRoutes, "CRUD", "get", "GET", "/:id", false, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "create", "POST", "", true, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "update", "PUT", "/:id", true, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "delete", "DELETE", "/:id", false, "object", null);
 
         if (entityCfg.children) {
             entityCfg.children.forEach((children) => {
-                this.addRouteDefault(entityRoutes, "CHILDREN", "query", "GET", "/:idFather/" + children.entityName, "array", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "get", "GET", "/:idFather/" + children.entityName + "/:idSon", "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "create", "POST", "/:idFather/" + children.entityName, "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon", "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon", "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "query", "GET", "/:idFather/" + children.entityName, false, "array", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "get", "GET", "/:idFather/" + children.entityName + "/:idSon", false, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "create", "POST", "/:idFather/" + children.entityName, true, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon", true, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon", false, "object", null);
             });
         }
 
@@ -119,7 +119,7 @@ module.exports = {
             entityCfg.customRoutes.forEach((customRoute) => {
                 entityRoutes.push({
                     type: "CUSTOM", name: customRoute.name, method: customRoute.method,
-                    path: customRoute.path, script: customRoute.script,
+                    path: customRoute.path, savePayload: customRoute.savePayload, script: customRoute.script,
                     fileParam: JSON.stringify(customRoute.fileParam),
                     responseType: customRoute.responseType, database: customRoute.database,
                     queryCustomInf: JSON.stringify(customRoute.queryCustomInf)
@@ -133,6 +133,7 @@ module.exports = {
         res.write('  <th>name</th>');
         res.write('  <th style="text-align: center">method</th>');
         res.write('  <th>path</th>');
+        res.write('  <th>savePyld</th>');
         res.write('  <th>script</th>');
         res.write('  <th>fileParam</th>');
         res.write('  <th>responseType</th>');
@@ -150,6 +151,7 @@ module.exports = {
             res.write(`  <td>${entityRoute.name}</td>`);
             res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
             res.write(`  <td>${entityCfg.mainPath}${entityRoute.path}</td>`);
+            res.write(`  <td>${entityRoute.savePayload || false}</td>`);
             res.write(`  <td>${entityRoute.script || ''}</td>`);
             res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
             res.write(`  <td>${entityRoute.responseType || 'object'}</td>`);
@@ -172,11 +174,11 @@ module.exports = {
         }
     },
 
-    addRouteDefault(entityRoutes, type, name, method, path, responseType, queryCustomInf) {
+    addRouteDefault(entityRoutes, type, name, method, path, savePayload, responseType, queryCustomInf) {
         entityRoutes.push({
             type: type, name: name, method: method, path: path,
-            responseType: responseType, database: "database",
-            queryCustomInf: queryCustomInf
+            savePayload: savePayload, responseType: responseType,
+            database: "database", queryCustomInf: queryCustomInf
         });
     },
 
