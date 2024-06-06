@@ -130,7 +130,7 @@ module.exports = {
                 case 'GET':
                     if (customRoute.responseType && customRoute.responseType === "file") {
                         app.get(customPath, function (req, res) {
-                            return methodCtrl.customGetFile(req, res, entityCfg, customRoute);
+                            return methodCtrl.customFile(req, res, 'GET', entityCfg, customRoute);
                         });
                     } else {
                         if (customRoute.script) {
@@ -145,20 +145,26 @@ module.exports = {
                     }
                     break;
                 case 'POST':
-                    if (customRoute.fileParam) {
-                        const upload = this.makeUploadConfig(customRoute.fileParam);
-                        app.post(customPath, upload.single('files'), function (req, res) {
-                            return methodCtrl.customPostUpload(req, res, entityCfg, fileName, customRoute);
+                    if (customRoute.responseType && customRoute.responseType === "file") {
+                        app.post(customPath, function (req, res) {
+                            return methodCtrl.customFile(req, res, 'POST', entityCfg, customRoute);
                         });
                     } else {
-                        if (customRoute.script) {
-                            app.post(customPath, function (req, res) {
-                                return methodCtrl.customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir);
+                        if (customRoute.fileParam) {
+                            const upload = this.makeUploadConfig(customRoute.fileParam);
+                            app.post(customPath, upload.single('files'), function (req, res) {
+                                return methodCtrl.customPostUpload(req, res, entityCfg, fileName, customRoute);
                             });
                         } else {
-                            app.post(customPath, function (req, res) {
-                                return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
-                            });
+                            if (customRoute.script) {
+                                app.post(customPath, function (req, res) {
+                                    return methodCtrl.customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir);
+                                });
+                            } else {
+                                app.post(customPath, function (req, res) {
+                                    return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
+                                });
+                            }
                         }
                     }
                     break;
@@ -174,29 +180,7 @@ module.exports = {
                 cb(null, fileParam.directory);
             },
             filename: function (req, file, cb) {
-                let fileName = file.originalname;
-
-                if (fileParam.fileName) {
-                    let extName = path.extname(file.originalname);
-
-                    fileName = fileParam.fileName;
-                    fileName = fileName.replace("#file#", file.originalname.replace(extName, ''));
-                    fileName = fileName.replace("#now#", Date.now().toString());
-
-                    let dtToday = new Date();
-                    let sDay = dtToday.getDate() < 10 ? `0${dtToday.getDate()}` : `${dtToday.getDate()}`;
-                    let sMonth = dtToday.getMonth() < 9 ? `0${dtToday.getMonth() + 1}` : `${dtToday.getMonth() + 1}`;
-                    fileName = fileName.replace("#today#", `${dtToday.getFullYear()}-${sMonth}-${sDay}`);
-
-                    if (req.params) {
-                        Object.keys(req.params).forEach((key) => {
-                            fileName = fileName.replace(`#${key}#`, req.params[key]);
-                        });
-                    }
-
-                    fileName = `${fileName}${extName}`;
-                }
-
+                let fileName = fileUts.makeFileName(fileParam.fileName, file.originalname, req.params);
                 cb(null, fileName);
             }
         });

@@ -49,5 +49,34 @@ module.exports = {
         if (diretory) { fileName = this.pathJoin(diretory, fileName); }
 
         return path.resolve(fileName);
+    },
+
+    makeFileName(fileNameCfg, fileNameOrg, params) {
+        if (!fileNameCfg) { return fileNameOrg; }
+        if (!fileNameOrg) { fileNameOrg = fileNameCfg; }
+
+        let extNameCfg = path.extname(fileNameCfg);
+        let extNameOrg = path.extname(fileNameOrg);
+
+        fileNameCfg = fileNameCfg.replace(extNameCfg, '');
+        fileNameOrg = fileNameOrg.replace(extNameOrg, '');
+
+        if (!extNameCfg) { extNameCfg = extNameOrg; }
+
+        let dtToday = new Date();
+        let sDay = dtToday.getDate() < 10 ? `0${dtToday.getDate()}` : `${dtToday.getDate()}`;
+        let sMonth = dtToday.getMonth() < 9 ? `0${dtToday.getMonth() + 1}` : `${dtToday.getMonth() + 1}`;
+
+        fileNameCfg = fileNameCfg.replace("#file#", path.basename(fileNameOrg));
+        fileNameCfg = fileNameCfg.replace("#now#", Date.now().toString());
+        fileNameCfg = fileNameCfg.replace("#today#", `${dtToday.getFullYear()}-${sMonth}-${sDay}`);
+
+        if (params) {
+            Object.keys(params).forEach((key) => {
+                fileNameCfg = fileNameCfg.replace(`#${key}#`, params[key]);
+            });
+        }
+
+        return `${fileNameCfg}${extNameCfg}`;
     }
 }

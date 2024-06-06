@@ -267,20 +267,20 @@ module.exports = {
         return res.status(statusCodeResponse).json(response);
     },
 
-    customGetFile(req, res, entityCfg, customRoute) {
-        this.logRequest("CUSTOM", customRoute.name, "GET (File)", req);
+    customFile(req, res, method, entityCfg, customRoute) {
+        this.logRequest("CUSTOM", customRoute.name, method + " (File)", req);
 
-        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
+        let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let fileName = null;
-        if (req.params) {
-            Object.keys(req.params).forEach((param) => { fileName = req.params[param]; });
+        if (customRoute.fileParam && customRoute.fileParam.fileName) {
+            fileName = fileUts.makeFileName(customRoute.fileParam.fileName, null, req.params);
         }
-
+        
         if (!fileName) {
             return res.status(404).json(
-                this.errorBuilderReturn([this.errorBuilder(404, 'O nome do Arquivo deve ser informado !')])
+                this.errorBuilderReturn([this.errorBuilder(404, 'O nome do Arquivo deve ser informado na configuração da Rota !')])
             );
         }
 
@@ -594,7 +594,7 @@ module.exports = {
         }
 
         if (customRoute.responseType === "file") {
-            return res.status(statusCodeResponse).sendFile(response);
+            return res.status(statusCodeResponse).download(response);
         } else {
             return res.status(statusCodeResponse).json(response);
         }
