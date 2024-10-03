@@ -209,29 +209,40 @@ module.exports = {
         return index;
     },
 
-    customGet(req, res, entityCfg, customRoute) {
-        this.logRequest("CUSTOM", customRoute.name, "GET", req);
+    customMethod(method, req, res, entityCfg, fileName, customRoute) {
+        this.logRequest("CUSTOM", customRoute.name, method, req);
 
-        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
+        let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let response = {};
         if (customRoute.database) {
             let database = genUts.copyArray(entityCfg[customRoute.database]);
-            let queryCustomInf = customRoute.responseType == "array" ? customRoute.queryCustomInf : null;
+
+            let queryCustomInf = null;
+            if (method == 'GET' && customRoute.responseType == "array") {
+                queryCustomInf = customRoute.queryCustomInf;
+            }
             response = this.applyAllQueryFilters(database, req, entityCfg.customSearchFields, queryCustomInf);
 
-            customVld = this.customValidationDatabase('GET', customRoute.name, response.items, res, entityCfg);
+            customVld = this.customValidationDatabase(method, customRoute.name, response.items, res, entityCfg);
             if (customVld) { return customVld; };
+
+            if (method !== 'GET') {
+                if (customRoute.savePayload && req.body && Object.keys(req.body).length > 0) {
+                    entityCfg[customRoute.database].push(req.body);
+                    fileUts.saveFile(fileName, entityCfg);
+                }
+            }
         }
 
         return this.makeCustomResponse(res, customRoute, response);
     },
 
-    customGetScript(req, res, entityCfg, customRoute, projRootDir) {
-        this.logRequest("CUSTOM", customRoute.name, "GET (Script)", req);
+    customMethodScript(method, req, res, entityCfg, fileName, customRoute, projRootDir) {
+        this.logRequest("CUSTOM", customRoute.name, method + " (Script)", req);
 
-        let customVld = this.customValidationParams('GET', customRoute.name, req, res, entityCfg);
+        let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let arqScript = fileUts.pathJoin(projRootDir, 'data');
@@ -249,7 +260,23 @@ module.exports = {
 
         try {
             customScript = require(arqScript);
-            responseScript = customScript.get(req.params, req.query, database);
+
+            switch (method) {
+                case 'GET':
+                    responseScript = customScript.get(req.params, req.query, database);
+                    break;
+                case 'PUT':
+                    responseScript = customScript.put(req.params, req.query, req.body, database);
+                    break;
+                case 'POST':
+                    responseScript = customScript.post(req.params, req.query, req.body, database);
+                    break;
+                case 'DELETE':
+                    responseScript = customScript.delete(req.params, req.query, req.body, database);
+                    break;
+                default:
+                    console.log('customScript: Método Inválido -', method);
+            }
         }
         catch (errorScript) {
             return res.status(500).json(
@@ -262,12 +289,19 @@ module.exports = {
         if (responseScript) {
             if (responseScript.statusCode) { statusCodeResponse = responseScript.statusCode };
             if (responseScript.response) { response = responseScript.response };
+
+            if (method !== 'GET') {
+                if (responseScript.database) {
+                    entityCfg[customRoute.database] = responseScript.database;
+                    fileUts.saveFile(fileName, entityCfg);
+                }
+            }
         }
 
         return res.status(statusCodeResponse).json(response);
     },
 
-    customFile(req, res, method, entityCfg, customRoute) {
+    customMethodFile(method, req, res, entityCfg, customRoute) {
         this.logRequest("CUSTOM", customRoute.name, method + " (File)", req);
 
         let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
@@ -309,76 +343,10 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, fileArq);
     },
 
-    customPost(req, res, entityCfg, fileName, customRoute) {
-        this.logRequest("CUSTOM", customRoute.name, "POST", req);
+    customMethodUpload(method, req, res, entityCfg, fileName, customRoute) {
+        this.logRequest("CUSTOM", customRoute.name, method + " (Upload)", req);
 
-        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
-        if (customVld) { return customVld; };
-
-        let response = {};
-        if (customRoute.database) {
-            let database = genUts.copyArray(entityCfg[customRoute.database]);
-            response = this.applyAllQueryFilters(database, req, entityCfg.customSearchFields, null);
-
-            customVld = this.customValidationDatabase('POST', customRoute.name, response.items, res, entityCfg);
-            if (customVld) { return customVld; };
-
-            if (customRoute.savePayload && req.body && Object.keys(req.body).length > 0) {
-                entityCfg[customRoute.database].push(req.body);
-                fileUts.saveFile(fileName, entityCfg);
-            }
-        }
-
-        return this.makeCustomResponse(res, customRoute, response);
-    },
-
-    customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir) {
-        this.logRequest("CUSTOM", customRoute.name, "POST (Script)", req);
-
-        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
-        if (customVld) { return customVld; };
-
-        let arqScript = fileUts.pathJoin(projRootDir, 'data');
-        arqScript = fileUts.pathJoin(arqScript, customRoute.script);
-
-        if (!fileUts.pathExist(arqScript)) {
-            return res.status(500).json(
-                this.errorBuilderReturn([this.errorBuilder(500, `Script da Rota não encontrado: ${arqScript}`)])
-            );
-        }
-
-        let database = genUts.copyArray(entityCfg[customRoute.database]);
-        let customScript = null;
-        let responseScript = null;
-
-        try {
-            customScript = require(arqScript);
-            responseScript = customScript.post(req.params, req.query, req.body, database);
-        }
-        catch (errorScript) {
-            return res.status(500).json(
-                this.errorBuilderReturn([this.errorTryCatchBuilder(500, 'Erro ao executar o Script da Rota !', errorScript)])
-            );
-        }
-
-        let statusCodeResponse = 200;
-        let response = {};
-        if (responseScript) {
-            if (responseScript.statusCode) { statusCodeResponse = responseScript.statusCode };
-            if (responseScript.response) { response = responseScript.response };
-            if (responseScript.database) {
-                entityCfg[customRoute.database] = responseScript.database;
-                fileUts.saveFile(fileName, entityCfg);
-            }
-        }
-
-        return res.status(statusCodeResponse).json(response);
-    },
-
-    customPostUpload(req, res, entityCfg, fileName, customRoute) {
-        this.logRequest("CUSTOM", customRoute.name, "POST (Upload)", req);
-
-        let customVld = this.customValidationParams('POST', customRoute.name, req, res, entityCfg);
+        let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
 
         let uploadFile = {

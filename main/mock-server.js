@@ -130,42 +130,77 @@ module.exports = {
                 case 'GET':
                     if (customRoute.responseType && customRoute.responseType === "file") {
                         app.get(customPath, function (req, res) {
-                            return methodCtrl.customFile(req, res, 'GET', entityCfg, customRoute);
+                            return methodCtrl.customMethodFile('GET', req, res, entityCfg, customRoute);
                         });
                     } else {
                         if (customRoute.script) {
                             app.get(customPath, function (req, res) {
-                                return methodCtrl.customGetScript(req, res, entityCfg, customRoute, projRootDir);
+                                return methodCtrl.customMethodScript('GET', req, res, entityCfg, "", customRoute, projRootDir);
                             });
                         } else {
                             app.get(customPath, function (req, res) {
-                                return methodCtrl.customGet(req, res, entityCfg, customRoute);
+                                return methodCtrl.customMethod('GET', req, res, entityCfg, "", customRoute);
                             });
+                        }
+                    }
+                    break;
+                case 'PUT':
+                    if (customRoute.responseType && customRoute.responseType === "file") {
+                        app.put(customPath, function (req, res) {
+                            return methodCtrl.customMethodFile('PUT', req, res, entityCfg, customRoute);
+                        });
+                    } else {
+                        if (customRoute.fileParam) {
+                            const upload = this.makeUploadConfig(customRoute.fileParam);
+                            app.put(customPath, upload.single('files'), function (req, res) {
+                                return methodCtrl.customMethodUpload('PUT', req, res, entityCfg, fileName, customRoute);
+                            });
+                        } else {
+                            if (customRoute.script) {
+                                app.put(customPath, function (req, res) {
+                                    return methodCtrl.customMethodScript('PUT', req, res, entityCfg, fileName, customRoute, projRootDir);
+                                });
+                            } else {
+                                app.put(customPath, function (req, res) {
+                                    return methodCtrl.customMethod('PUT', req, res, entityCfg, fileName, customRoute);
+                                });
+                            }
                         }
                     }
                     break;
                 case 'POST':
                     if (customRoute.responseType && customRoute.responseType === "file") {
                         app.post(customPath, function (req, res) {
-                            return methodCtrl.customFile(req, res, 'POST', entityCfg, customRoute);
+                            return methodCtrl.customMethodFile('POST', req, res, entityCfg, customRoute);
                         });
                     } else {
                         if (customRoute.fileParam) {
                             const upload = this.makeUploadConfig(customRoute.fileParam);
                             app.post(customPath, upload.single('files'), function (req, res) {
-                                return methodCtrl.customPostUpload(req, res, entityCfg, fileName, customRoute);
+                                return methodCtrl.customMethodUpload('POST', req, res, entityCfg, fileName, customRoute);
                             });
                         } else {
                             if (customRoute.script) {
                                 app.post(customPath, function (req, res) {
-                                    return methodCtrl.customPostScript(req, res, entityCfg, fileName, customRoute, projRootDir);
+                                    return methodCtrl.customMethodScript('POST', req, res, entityCfg, fileName, customRoute, projRootDir);
                                 });
                             } else {
                                 app.post(customPath, function (req, res) {
-                                    return methodCtrl.customPost(req, res, entityCfg, fileName, customRoute);
+                                    return methodCtrl.customMethod('POST', req, res, entityCfg, fileName, customRoute);
                                 });
                             }
                         }
+                    }
+                    break;
+                case 'DELETE':
+                    if (customRoute.script) {
+                        app.delete(customPath, function (req, res) {
+                            return methodCtrl.customMethodScript('DELETE', req, res, entityCfg, fileName, customRoute, projRootDir);
+                        });
+                    } else {
+                        app.delete(customPath, function (req, res) {
+                            return methodCtrl.customMethod('DELETE', req, res, entityCfg, fileName, customRoute);
+                        });
                     }
                     break;
                 default:

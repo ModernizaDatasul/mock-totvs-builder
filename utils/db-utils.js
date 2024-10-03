@@ -23,7 +23,11 @@ module.exports = {
                     if (queryValue instanceof Array) {
                         let queryValueList = [];
                         queryValue.forEach(item => {
-                            queryValueList.push(item.toUpperCase());
+                            if (item instanceof Object) {
+                                queryValueList.push(JSON.stringify(item).toUpperCase());
+                            } else {
+                                queryValueList.push(item.toUpperCase());
+                            }
                         });
                         return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
                     }

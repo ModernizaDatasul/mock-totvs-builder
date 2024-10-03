@@ -144,7 +144,7 @@ Quando as rotas padrões pré-definidas não atendem, é possível configurar no
 |Parâmetro|Obrig?|Descrição|Exemplos|
 |--|--|--|--|
 |**name**<br>(string)|Sim|Um nome qualquer para identificar a rota. Será apresentado no Log quando realizada uma requisição para ela.<br>**Observação**: O nome deve ser único, isto é, não deve existir outra rota (Pré-definida ou Customizada) com o mesmo nome.|```"nextId"```|
-|**method**<br>(string)|Sim|Método da Requisição. Podendo ser:<br>**- GET:** Utilizado para retornar alguma informação (ex: Próximo ID, Valores totais de uma pesquisa, etc).<br>**- POST:** Utilizado para executar alguma ação ou enviar alguma informação (Bloquear um cliente, Disparar um relatório, Enviar dados para duplicar um cliente, etc).<br>**Observações:**<br> - Independente do método, serão aplicadas as mesmas regras de pesquisa de Busca Avançada (ver tópico **Rotas Pré-definidas - Busca Avançada**), desta forma, terá o controle de Paginação, Ordenação, Filtro, etc;<br>- A pesquisa será realizada sobre a lista informada no parâmetro **"database"** da rota.|```"GET"```<br>OU<br>```"POST"```|
+|**method**<br>(string)|Sim|Método da Requisição. Podendo ser:<br>**- GET:** Utilizado para retornar alguma informação (ex: Próximo ID, Valores totais de uma pesquisa, etc).<br>**- PUT ou POST:** Utilizado para executar alguma ação ou enviar alguma informação (Bloquear um cliente, Disparar um relatório, Enviar dados para duplicar um cliente, etc).<br>**- DELETE:** Utilizado para executar um delete customizado (fora do padrão).<br>**Observações:**<br> - Independente do método, serão aplicadas as mesmas regras de pesquisa de Busca Avançada (ver tópico **Rotas Pré-definidas - Busca Avançada**), desta forma, terá o controle de Paginação, Ordenação, Filtro, etc;<br>- A pesquisa será realizada sobre a lista informada no parâmetro **"database"** da rota.|```"GET"```<br>OU<br>```"PUT"```<br>OU<br>```"POST"```<br>OU<br>```"DELETE"```|
 |**path**<br>(string)|Sim|URL que será utilizado na Requisição. É a informação que virá após o **mainPath** da entidade. Por exemplo, na URL **"/customer/nextId"** deve ser informado **"/nextId"**.<br>Também é possível indicar parâmetros na URL, utilizando **":" + "nome-parâmetro"** (ex: "/:idCust/block"). Ele será utilizado para filtrar a lista informada no parâmetro **"database"** da rota. Para isto, é necessário que exista um atributo na lista com o mesmo nome do parâmetro. Por exemplo, para a URL **"/:idCust/block"** deve existir um atributo chamado **"idCust"** na lista **database** da rota. Desta forma, é possível configurar retornos diferentes conforme o parâmetro enviado (ex: Se o cliente for "1" retorna Bloqueio OK, se o cliente for "3", retornar um erro).|Ex1:<br>```"/nextId"```<br>Ex2:<br>```"/:idCust/block"```|
 |**savePayload**<br>(logical)|Não|Indica se as informações enviadas no Payload das requisições de **POST**, devem ser salvas no **database** da rota. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
 |**script**<br>(string)|Não|Parâmetro utilizado para informar um programa desenvolvido em NodeJS, que será executado ao receber a requisição na rota. Desta forma é possível programar qualquer comportamento, ou até mesmo realizar algum cálculo com base nos dados.<br>Ver detalhes da configuração no tópico: **Configurando Script de Rota**.|```"customer.js"```|
@@ -174,8 +174,8 @@ Segue abaixo os tratamento conforme o método da rota:<br>
 |**statusCode**<br>(number)|Código de Status a ser retornado na Requisição (ex: 200, 404, 500). Se não for informado, será retornado **200**.|
 |**response**<br>(object)|Objeto de Response, retornado na Requisição. Se não for informado, será retornado um objeto vazio.|
 
-**Rotas com método POST**:<br>
-- O programa deverá ter uma função chamada **"post"**;
+**Rotas com método PUT, POST ou DELETE**:<br>
+- O programa deverá ter uma função chamada **"put", "post" ou "delete"**;
 
 |Parâmetro|Descrição|
 |--|--|
@@ -196,13 +196,13 @@ Segue abaixo os tratamento conforme o método da rota:<br>
 
 É possível configurar uma Rota Customizada para receber arquivos via Upload ou realizar o Download de arquivos a partir do Backend. Para isto, basta seguir as orientações abaixo conforme cada tipo:<br><br>
 **Upload de Arquivos**:<br>
-- O parâmetro **"method"** da rota deverá ser igual a **"POST"**;
+- O parâmetro **"method"** da rota deverá ser igual a **"PUT"** ou **"POST"**;
 - Deverá ser incluído o parâmetro **"fileParam"** na rota (detalhe na tabela abaixo), para configuração do nome e diretório de destino onde os arquivos serão salvos;
 - Os detalhes dos arquivos recebidos, serão salvos no parâmetro **"database"** configurado na rota, caso ele seja informado. Portanto neste caso, se for informado, o ideal é ter um **database** específico;
 - Os detalhes dos arquivos também serão retornados no **response** da requisição, no formato JSON, portanto o **"responseType"** não precisa ser informado, ou deve ser igual a **"object"**. 
 
 **Download de Arquivos**:<br>
-- O parâmetro **"method"** da rota deverá ser igual a **"GET"** ou **"POST"**;
+- O parâmetro **"method"** da rota deverá ser igual a **"GET"**, **"PUT"** ou **"POST"**;
 - Deverá ser incluído o parâmetro **"fileParam"** na rota (detalhe na tabela abaixo), para configuração do nome e diretório onde os arquivos estarão fisicamente;
 - Se o arquivo não existir no diretório configurado no momento da requisição, será retornado um erro **404**;
 - O parâmetro **"database"** da rota não é utilizado. Portanto ele não deve ser informado;
