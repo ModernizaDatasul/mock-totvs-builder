@@ -518,7 +518,7 @@ Para incorporar o mock-totvs-builder ao seu projeto, basta seguir os passos abai
 1) Instalar o **mock-totvs-builder** e o **nodemon** (biblioteca que controla o reload do mock) no projeto, como uma dependência de Desenvolvimento, executando os comandos abaixo no terminal: 
 	```
 	npm install --save-dev mock-totvs-builder
-	npm install --save-dev nodemon@1
+	npm install --save-dev nodemon
 	```
 
 2) Na pasta principal do seu projeto (mesma pasta onde está o **package.json**) criar um novo arquivo chamado **"start-mock.js"**, com o seguinte conteúdo:
