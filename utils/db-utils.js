@@ -5,70 +5,75 @@ module.exports = {
         let keyItem = null;
 
         Object.keys(query).forEach((keyQry) => {
-            if (keyQry !== 'pageSize' && keyQry !== 'page' && keyQry !== 'fields' && keyQry !== 'order') {
-                keyItem = (fromTo && fromTo[keyQry]) ? fromTo[keyQry] : keyQry;
+            if (keyQry == 'pageSize' || keyQry == 'page' || keyQry == 'fields' || keyQry == 'order') { return; }
 
-                filteredList = filteredList.filter((item) => {
-                    let queryValue = query[keyQry];
-                    let itemValue = item[keyItem];
+            keyItem = (fromTo && fromTo[keyQry]) ? fromTo[keyQry] : keyQry;
 
-                    if (itemValue === null || itemValue == undefined) { return true; }
-
-                    if (typeof queryValue === 'string') { queryValue = queryValue.toUpperCase(); }
-                    if (typeof itemValue === 'string') { itemValue = itemValue.toUpperCase(); }
-
-                    if (queryValue === 'ALL') { return true; }
-
-                    // QueryParam do tipo List (array)
-                    if (queryValue instanceof Array) {
-                        let queryValueList = [];
-                        queryValue.forEach(item => {
-                            if (item instanceof Object) {
-                                queryValueList.push(JSON.stringify(item).toUpperCase());
-                            } else {
-                                queryValueList.push(item.toUpperCase());
-                            }
-                        });
-                        return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
-                    }
-
-                    if (typeof queryValue === 'string') {
-
-                        // QueryParam do tipo Range
-                        if (queryValue.indexOf(";") !== -1) {
-                            let queryValueIni = queryValue.split(";")[0];
-                            let queryValueFim = queryValue.split(";")[1];
-                            return itemValue >= queryValueIni && itemValue <= queryValueFim;
-                        }
-
-                        // QueryParam do tipo List (virgula)
-                        if (queryValue.indexOf(",") !== -1) {
-                            let queryValueList = queryValue.split(",");
-                            return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
-                        }
-                    }
-
-                    if (typeof itemValue === 'string') {
-                        return itemValue.includes(queryValue);
-                    }
-
-                    if (typeof itemValue === 'boolean') {
-                        if (itemValue && queryValue === 'TRUE') { return true; }
-                        if (!itemValue && queryValue === 'FALSE') { return true; }
-                        if (itemValue && (!queryValue)) { return true; }
-                        return false;
-                    }
-
-                    if (queryValue instanceof Object) {
-                        return JSON.stringify(itemValue) === JSON.stringify(queryValue);
-                    } 
-
-                    return itemValue == queryValue; // O tipo pode ser diferente então usa ==
-                });
-            }
+            filteredList = filteredList.filter((item) => {
+                if (keyItem instanceof Array) {
+                    return keyItem.some((kItem) => this.compareValue(query[keyQry], item[kItem]));
+                } else {
+                    return this.compareValue(query[keyQry], item[keyItem]);
+                }
+            });
         });
 
         return filteredList;
+    },
+
+    compareValue(queryValue, itemValue) {
+        if (itemValue === null || itemValue == undefined) { return true; }
+
+        if (typeof queryValue === 'string') { queryValue = queryValue.toUpperCase(); }
+        if (typeof itemValue === 'string') { itemValue = itemValue.toUpperCase(); }
+
+        if (queryValue === 'ALL') { return true; }
+
+        // QueryParam do tipo List (array)
+        if (queryValue instanceof Array) {
+            let queryValueList = [];
+            queryValue.forEach(item => {
+                if (item instanceof Object) {
+                    queryValueList.push(JSON.stringify(item).toUpperCase());
+                } else {
+                    queryValueList.push(item.toUpperCase());
+                }
+            });
+            return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
+        }
+
+        if (typeof queryValue === 'string') {
+
+            // QueryParam do tipo Range
+            if (queryValue.indexOf(";") !== -1) {
+                let queryValueIni = queryValue.split(";")[0];
+                let queryValueFim = queryValue.split(";")[1];
+                return itemValue >= queryValueIni && itemValue <= queryValueFim;
+            }
+
+            // QueryParam do tipo List (virgula)
+            if (queryValue.indexOf(",") !== -1) {
+                let queryValueList = queryValue.split(",");
+                return queryValueList.indexOf(itemValue.toString().toUpperCase()) !== -1;
+            }
+        }
+
+        if (typeof itemValue === 'string') {
+            return itemValue.includes(queryValue);
+        }
+
+        if (typeof itemValue === 'boolean') {
+            if (itemValue && queryValue === 'TRUE') { return true; }
+            if (!itemValue && queryValue === 'FALSE') { return true; }
+            if (itemValue && (!queryValue)) { return true; }
+            return false;
+        }
+
+        if (queryValue instanceof Object) {
+            return JSON.stringify(itemValue) === JSON.stringify(queryValue);
+        }
+
+        return itemValue == queryValue; // O tipo pode ser diferente então usa ==
     },
 
     applyFields(list, fields) {
