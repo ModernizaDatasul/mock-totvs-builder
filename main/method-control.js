@@ -4,8 +4,10 @@ const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
 
-    query(req, res, mainEntityCfg, type, entityName) {
+    async query(req, res, mainEntityCfg, type, entityName) {
         this.logRequest(type, entityName, 'GET (query)', req);
+
+        await this.doDelayedRoute(mainEntityCfg, 'query');
 
         let entityCfg = mainEntityCfg;
         let entityDB = entityCfg.database;
@@ -27,8 +29,10 @@ module.exports = {
         return res.json(response);
     },
 
-    get(req, res, mainEntityCfg, type, entityName) {
+    async get(req, res, mainEntityCfg, type, entityName) {
         this.logRequest(type, entityName, 'GET', req);
+
+        await this.doDelayedRoute(mainEntityCfg, 'get');
 
         let entityCfg = mainEntityCfg;
         let entityDB = entityCfg.database;
@@ -50,8 +54,10 @@ module.exports = {
         return res.json(entityDB[index]);
     },
 
-    create(req, res, mainEntityCfg, fileName, type, entityName) {
+    async create(req, res, mainEntityCfg, fileName, type, entityName) {
         this.logRequest(type, entityName, 'POST (create)', req);
+
+        await this.doDelayedRoute(mainEntityCfg, 'create');
 
         let entityCfg = mainEntityCfg;
         let entityDB = entityCfg.database;
@@ -96,8 +102,10 @@ module.exports = {
         return res.json(newEntity);
     },
 
-    update(req, res, mainEntityCfg, fileName, type, entityName) {
+    async update(req, res, mainEntityCfg, fileName, type, entityName) {
         this.logRequest(type, entityName, 'PUT (update)', req);
+
+        await this.doDelayedRoute(mainEntityCfg, 'update');
 
         let entityCfg = mainEntityCfg;
         let entityDB = entityCfg.database;
@@ -127,8 +135,10 @@ module.exports = {
         return res.json(entityDB[index]);
     },
 
-    delete(req, res, mainEntityCfg, fileName, type, entityName) {
+    async delete(req, res, mainEntityCfg, fileName, type, entityName) {
         this.logRequest(type, entityName, 'DELETE', req);
+
+        await this.doDelayedRoute(mainEntityCfg, 'delete');
 
         let entityCfg = mainEntityCfg;
         let entityDB = entityCfg.database;
@@ -209,8 +219,10 @@ module.exports = {
         return index;
     },
 
-    customMethod(method, req, res, entityCfg, fileName, customRoute) {
+    async customMethod(method, req, res, entityCfg, fileName, customRoute) {
         this.logRequest("CUSTOM", customRoute.name, method, req);
+
+        await this.doDelayedRoute(entityCfg, customRoute.name);
 
         let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -239,8 +251,10 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, response);
     },
 
-    customMethodScript(method, req, res, entityCfg, fileName, customRoute, projRootDir) {
+    async customMethodScript(method, req, res, entityCfg, fileName, customRoute, projRootDir) {
         this.logRequest("CUSTOM", customRoute.name, method + " (Script)", req);
+
+        await this.doDelayedRoute(entityCfg, customRoute.name);
 
         let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -301,8 +315,10 @@ module.exports = {
         return res.status(statusCodeResponse).json(response);
     },
 
-    customMethodFile(method, req, res, entityCfg, customRoute) {
+    async customMethodFile(method, req, res, entityCfg, customRoute) {
         this.logRequest("CUSTOM", customRoute.name, method + " (File)", req);
+
+        await this.doDelayedRoute(entityCfg, customRoute.name);
 
         let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -343,8 +359,10 @@ module.exports = {
         return this.makeCustomResponse(res, customRoute, fileArq);
     },
 
-    customMethodUpload(method, req, res, entityCfg, fileName, customRoute) {
+    async customMethodUpload(method, req, res, entityCfg, fileName, customRoute) {
         this.logRequest("CUSTOM", customRoute.name, method + " (Upload)", req);
+
+        await this.doDelayedRoute(entityCfg, customRoute.name);
 
         let customVld = this.customValidationParams(method, customRoute.name, req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -487,6 +505,19 @@ module.exports = {
             return null;
         }
         return errorCustVld;
+    },
+
+    async doDelayedRoute(entityCfg, routeName) {
+        if (!entityCfg.delayRounte || entityCfg.delayRounte.length === 0) { return; }
+
+        let routeFound = entityCfg.delayRounte.find(route => route.name === routeName);
+        if (!routeFound) { return; }
+        if (!routeFound.delay || routeFound.delay <= 0) { return; }
+
+        console.log(`Delaying route '${routeName}' for ${routeFound.delay} ms`);
+
+        // Simulate slow route - wait for the configured delay
+        await new Promise(resolve => setTimeout(resolve, routeFound.delay));
     },
 
     makeCustomValidError(custVld, field) {
