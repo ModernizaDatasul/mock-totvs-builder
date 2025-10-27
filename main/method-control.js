@@ -508,9 +508,9 @@ module.exports = {
     },
 
     async doDelayedRoute(entityCfg, routeName) {
-        if (!entityCfg.delayRounte || entityCfg.delayRounte.length === 0) { return; }
+        if (!entityCfg.delayRoute || entityCfg.delayRoute.length === 0) { return; }
 
-        let routeFound = entityCfg.delayRounte.find(route => route.name === routeName);
+        let routeFound = entityCfg.delayRoute.find(route => route.name === routeName);
         if (!routeFound) { return; }
         if (!routeFound.delay || routeFound.delay <= 0) { return; }
 
