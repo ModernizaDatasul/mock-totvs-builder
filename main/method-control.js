@@ -561,11 +561,12 @@ module.exports = {
         if (req.body) { database = dbUts.applyQueryFilter(database, req.body, customSearchFields); }
 
         const { pageSize = 20, page = 1, order, fields } = req.query;
+
+        if (order) { dbUts.applyOrder(database, order); }
+
         const entitiesResponse = database.slice((page - 1) * pageSize, pageSize * page);
 
         if (fields) { dbUts.applyFields(entitiesResponse, fields); }
-
-        if (order) { dbUts.applyOrder(entitiesResponse, order); }
 
         let returnResponse = {
             items: entitiesResponse,
