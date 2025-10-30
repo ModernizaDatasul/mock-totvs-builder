@@ -60,6 +60,12 @@ module.exports = {
             let qtdRoutesDefauts = 5;
             if (entityCfg.children) {
                 qtdRoutesDefauts = qtdRoutesDefauts + (entityCfg.children.length * 5);
+
+                entityCfg.children.forEach((children) => {
+                    if (children.children) {
+                        qtdRoutesDefauts = qtdRoutesDefauts + (children.children.length * 5);
+                    }
+                });
             }
 
             res.write(' <tr>');
@@ -112,6 +118,16 @@ module.exports = {
                 this.addRouteDefault(entityRoutes, "CHILDREN", "create", "POST", "/:idFather/" + children.entityName, true, "object", null);
                 this.addRouteDefault(entityRoutes, "CHILDREN", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon", true, "object", null);
                 this.addRouteDefault(entityRoutes, "CHILDREN", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon", false, "object", null);
+
+                if (children.children) {
+                    children.children.forEach((grandson) => {
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "query", "GET", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName, false, "array", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "get", "GET", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", false, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "create", "POST", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName, true, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", true, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", false, "object", null);
+                    });
+                }                
             });
         }
 

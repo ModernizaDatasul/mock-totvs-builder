@@ -115,6 +115,7 @@ Para realizar a configuração dos filhos, basta incluir o parâmetro **"childre
 |**keys**<br>(array)|Sim|Lista de atributos que fazem parte da chave única do filho (desconsiderando a chave da entidade).<br>Quando a chave for composta, os atributos devem estar na ordem esperada.|Ex1 (chave simples):<br>```["seq"]```<br>Ex2 (chave composta):<br>```["bank","account"]```|
 |**keysSeparator**<br>(string)|Não|Caracter que será utilizado para concatenar as chaves do filho durante a busca de dados (get, update, delete), quando ele utilizar chave composta. O caracter deve corresponder ao que já é utilizado atualmente pelo FrontEnd para busca de dados. Por exemplo, para buscar o registro o FrontEnd dispara a requisição: ```/customer/1/bankAccount/001\|31232```, desta forma, o caracter utilizado para separar as chaves foi o pipe (**"\|"**), portanto este caracter deve ser utilizado neste parâmetro.<br>Se não for informado, será utilizado o caracter ponto-e-vírgula (**";"**) |Ex1:<br>```";"```<br>Ex2:<br>```"\|"```|
 |**base64Key**<br>(logical)|Não|Indica se a chave do filho é enviada em Base64 nas requisições de GET, PUT e DELETE. Caso afirmativo, a chave recebida será convertida **(base64 decode)** antes de realizar a busca da entidade. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
+|**children**<br>(array)|Não|Lista de filhos da entidade filha, isto é, entidade **neta** em relação a entidade principal. Utilizado para quando a entidade filha possui filhos diretos alinhados (que fazem parte da estrutura da entidade filha).<br>Da mesma forma como é feita para a entidade filha, serão criadas as **Rotas Pré-definidas** de **query, get, create, update, delete**. Sendo que no **Path** é acrescentado mais um nível (Ex get: ```/entidade/:idEntidade/filho/:idFilho/neto/:idNeto```).|```[{"entityName": "transaction", "entityLabel": "Transação Bancária", "keys": ["transactionId"]}]```|
 
 **Exemplo Configuração:**
 
@@ -135,6 +136,15 @@ Para realizar a configuração dos filhos, basta incluir o parâmetro **"childre
 			"entityName": "bankAccount",
 			"base64Key": true,
 			"keys": [ "bank", "account" ]
+            "children": [
+                {
+                    "entityName": "transaction",
+                    "entityLabel": "Transação",
+                    "property": "transactions",
+                    "base64Key": false,
+                    "keys": [ "transactionId" ]
+                }
+            ]
 		}
 	]
 }

@@ -4,78 +4,59 @@ const fileUts = require('../utils/file-utils.js');
 
 module.exports = {
 
-    async query(req, res, mainEntityCfg, type, entityName) {
+    async query(req, res, mainEntityCfg, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'GET (query)', req);
 
         await this.doDelayedRoute(mainEntityCfg, 'query');
 
-        let entityCfg = mainEntityCfg;
-        let entityDB = entityCfg.database;
-
-        if (type === "CHILDREN") {
-            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
-            entityCfg = childrenCfg;
-            entityDB = childrenCfg.database;
+        let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
+        if (!entityCfg) {
+            return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
 
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        let response = this.applyAllQueryFilters(entityDB, req, entityCfg.customSearchFields, entityCfg.queryCustomInf);
+        let response = this.applyAllQueryFilters(entityCfg.database, req, entityCfg.customSearchFields, entityCfg.queryCustomInf);
 
         return res.json(response);
     },
 
-    async get(req, res, mainEntityCfg, type, entityName) {
+    async get(req, res, mainEntityCfg, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'GET', req);
 
         await this.doDelayedRoute(mainEntityCfg, 'get');
 
-        let entityCfg = mainEntityCfg;
-        let entityDB = entityCfg.database;
-
-        if (type === "CHILDREN") {
-            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
-            entityCfg = childrenCfg;
-            entityDB = childrenCfg.database;
+        let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
+        if (!entityCfg) {
+            return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
 
-        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, type, entityDB);
+        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
             return index;
         }
 
-        return res.json(entityDB[index]);
+        return res.json(entityCfg.database[index]);
     },
 
-    async create(req, res, mainEntityCfg, fileName, type, entityName) {
+    async create(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'POST (create)', req);
 
         await this.doDelayedRoute(mainEntityCfg, 'create');
 
-        let entityCfg = mainEntityCfg;
-        let entityDB = entityCfg.database;
-
-        if (type === "CHILDREN") {
-            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
-            entityCfg = childrenCfg;
-            entityDB = childrenCfg.database;
+        let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
+        if (!entityCfg) {
+            return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
 
         const newEntity = req.body;
 
         const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys, entityCfg.keysSeparator);
         if (!req.params) req["params"] = {};
-        if (type === "CHILDREN") {
+        if (type === "GRANDSON") {
+            req.params["idGrandson"] = entityId;
+        } else if (type === "CHILDREN") {
             req.params["idSon"] = entityId;
         } else {
             req.params["id"] = entityId;
@@ -84,7 +65,7 @@ module.exports = {
         let customVld = this.customValidationParams('POST', 'create', req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        const index = entityDB.findIndex((entity) => {
+        const index = entityCfg.database.findIndex((entity) => {
             return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
@@ -95,69 +76,55 @@ module.exports = {
             );
         }
 
-        entityDB.push(newEntity);
+        entityCfg.database.push(newEntity);
 
         fileUts.saveFile(fileName, mainEntityCfg);
 
         return res.json(newEntity);
     },
 
-    async update(req, res, mainEntityCfg, fileName, type, entityName) {
+    async update(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'PUT (update)', req);
 
         await this.doDelayedRoute(mainEntityCfg, 'update');
 
-        let entityCfg = mainEntityCfg;
-        let entityDB = entityCfg.database;
-
-        if (type === "CHILDREN") {
-            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
-            entityCfg = childrenCfg;
-            entityDB = childrenCfg.database;
+        let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
+        if (!entityCfg) {
+            return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
 
-        const index = this.getRecordIndex('PUT', 'update', req, res, entityCfg, type, entityDB);
+        const index = this.getRecordIndex('PUT', 'update', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
             return index;
         }
 
         Object.keys(req.body).forEach((property) => {
             if (!entityCfg.keys.includes(property)) {
-                entityDB[index][property] = req.body[property];
+                entityCfg.database[index][property] = req.body[property];
             }
         });
 
         fileUts.saveFile(fileName, mainEntityCfg);
 
-        return res.json(entityDB[index]);
+        return res.json(entityCfg.database[index]);
     },
 
-    async delete(req, res, mainEntityCfg, fileName, type, entityName) {
+    async delete(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'DELETE', req);
 
         await this.doDelayedRoute(mainEntityCfg, 'delete');
 
-        let entityCfg = mainEntityCfg;
-        let entityDB = entityCfg.database;
-
-        if (type === "CHILDREN") {
-            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, entityDB);
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
-            entityCfg = childrenCfg;
-            entityDB = childrenCfg.database;
+        let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
+        if (!entityCfg) {
+            return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
 
-        const index = this.getRecordIndex('DELETE', 'delete', req, res, entityCfg, type, entityDB);
+        const index = this.getRecordIndex('DELETE', 'delete', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
             return index;
         }
 
-        entityDB.splice(index, 1);
+        entityCfg.database.splice(index, 1);
 
         fileUts.saveFile(fileName, mainEntityCfg);
 
@@ -166,14 +133,33 @@ module.exports = {
         });
     },
 
-    getChildrenCfg(req, res, entityCfg, entityName, entityDB) {
+    getConfigByType(req, res, entityCfg, type, entityName, entityFatherName) {
+        if (type === "CHILDREN") {
+            const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, "FATHER", "isChildrenCfg");
+            if (!childrenCfg.isChildrenCfg) {
+                return childrenCfg;
+            }
+            entityCfg = childrenCfg;
+        }
 
+        if (type === "GRANDSON") {
+            const grandsonCfg = this.getGrandsonCfg(req, res, entityCfg, entityName, entityFatherName);
+            if (!grandsonCfg.isGrandsonCfg) {
+                return grandsonCfg;
+            }
+            entityCfg = grandsonCfg;
+        }
+
+        return entityCfg;
+    },
+
+    getChildrenCfg(req, res, entityCfg, entityName, fatherType, cfgType) {
         // Busca o Pai
-        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, "FATHER", entityDB);
+        const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, fatherType);
         if (typeof (index) !== 'number') {
             return index;
         }
-        let entityFather = entityDB[index];
+        let entityFather = entityCfg.database[index];
 
         let childrenCfgOrig = entityCfg.children.find((entity) => {
             return entity.entityName === entityName;
@@ -181,7 +167,7 @@ module.exports = {
 
         var childrenCfg = { ...childrenCfgOrig }
 
-        childrenCfg["isChildrenCfg"] = true;
+        childrenCfg[cfgType] = true;
 
         let property = childrenCfg.property;
         if (!property) { property = childrenCfg.entityName; }
@@ -192,17 +178,35 @@ module.exports = {
         return childrenCfg;
     },
 
-    getRecordIndex(method, route, req, res, entityCfg, type, entityDB) {
+    getGrandsonCfg(req, res, entityCfg, entityName, entityFatherName) {
+
+        // Busca configuração do Filho
+        const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityFatherName, "FATHER", "isChildrenCfg");
+        if (!childrenCfg.isChildrenCfg) {
+            return childrenCfg;
+        }
+
+        // Busca configuração do Neto
+        const grandsonCfg = this.getChildrenCfg(req, res, childrenCfg, entityName, "CHILDREN", "isGrandsonCfg");
+        if (!grandsonCfg.isGrandsonCfg) {
+            return grandsonCfg;
+        }
+
+        return grandsonCfg;
+    },
+
+    getRecordIndex(method, route, req, res, entityCfg, type) {
         let entityId = req.params.id;
         if (type === "FATHER") { entityId = req.params.idFather; }
         if (type === "CHILDREN") { entityId = req.params.idSon; }
+        if (type === "GRANDSON") { entityId = req.params.idGrandson; }
 
         if (entityCfg.base64Key) { entityId = genUts.atob(entityId); }
 
         let customVld = this.customValidationParams(method, route, req, res, entityCfg);
         if (customVld) { return customVld; };
 
-        const index = entityDB.findIndex((entity) => {
+        const index = entityCfg.database.findIndex((entity) => {
             return this.entityKeyCompare(entity, entityCfg.keys, entityCfg.keysSeparator, entityId);
         });
 
@@ -213,7 +217,7 @@ module.exports = {
             );
         }
 
-        customVld = this.customValidationDatabase(method, route, entityDB[index], res, entityCfg);
+        customVld = this.customValidationDatabase(method, route, entityCfg.database[index], res, entityCfg);
         if (customVld) { return customVld; };
 
         return index;

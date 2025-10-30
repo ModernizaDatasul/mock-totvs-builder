@@ -81,41 +81,53 @@ module.exports = {
     },
 
     makeCRUDRoute(app, fileName, entityCfg) {
-        this.makeDefaultRoute(app, fileName, entityCfg, entityCfg.mainPath, "CRUD", entityCfg.entityName);
+        this.makeDefaultRoute(app, fileName, entityCfg, entityCfg.mainPath, "CRUD", entityCfg.entityName, "");
     },
 
     makeCHILDRENRoute(app, fileName, entityCfg) {
         if (!entityCfg.children) { return; }
         if (entityCfg.children.length === 0) { return; }
 
-        entityCfg.children.forEach((children) => {
-            let entityPath = entityCfg.mainPath + "/:idFather/" + children.entityName;
-            this.makeDefaultRoute(app, fileName, entityCfg, entityPath, "CHILDREN", children.entityName);
+        entityCfg.children.forEach((childrenCfg) => {
+            let childrenPath = entityCfg.mainPath + "/:idFather/" + childrenCfg.entityName;
+            this.makeDefaultRoute(app, fileName, entityCfg, childrenPath, "CHILDREN", childrenCfg.entityName, entityCfg.entityName);
+            this.makeGRANDSONRoute(app, fileName, entityCfg, childrenCfg, childrenPath);
         });
     },
 
-    makeDefaultRoute(app, fileName, entityCfg, entityPath, type, entityName) {
+    makeGRANDSONRoute(app, fileName, entityCfg, childrenCfg, childrenPath) {
+        if (!childrenCfg.children) { return; }
+        if (childrenCfg.children.length === 0) { return; }
+
+        childrenCfg.children.forEach((grandsonCfg) => {
+            let grandsonPath = childrenPath + "/:idSon/" + grandsonCfg.entityName;
+            this.makeDefaultRoute(app, fileName, entityCfg, grandsonPath, "GRANDSON", grandsonCfg.entityName, childrenCfg.entityName);
+        });
+    },
+
+    makeDefaultRoute(app, fileName, entityCfg, entityPath, type, entityName, entityFatherName) {
         let idParam = '/:id';
         if (type === "CHILDREN") { idParam = '/:idSon' }
+        if (type === "GRANDSON") { idParam = '/:idGrandson' }
 
         app.get(entityPath, function (req, res) {
-            return methodCtrl.query(req, res, entityCfg, type, entityName);
+            return methodCtrl.query(req, res, entityCfg, type, entityName, entityFatherName);
         });
 
         app.get(entityPath + idParam, function (req, res) {
-            return methodCtrl.get(req, res, entityCfg, type, entityName);
+            return methodCtrl.get(req, res, entityCfg, type, entityName, entityFatherName);
         });
 
         app.post(entityPath, function (req, res) {
-            return methodCtrl.create(req, res, entityCfg, fileName, type, entityName);
+            return methodCtrl.create(req, res, entityCfg, fileName, type, entityName, entityFatherName);
         });
 
         app.put(entityPath + idParam, function (req, res) {
-            return methodCtrl.update(req, res, entityCfg, fileName, type, entityName);
+            return methodCtrl.update(req, res, entityCfg, fileName, type, entityName, entityFatherName);
         });
 
         app.delete(entityPath + idParam, function (req, res) {
-            return methodCtrl.delete(req, res, entityCfg, fileName, type, entityName);
+            return methodCtrl.delete(req, res, entityCfg, fileName, type, entityName, entityFatherName);
         });
     },
 
