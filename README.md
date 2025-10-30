@@ -135,7 +135,7 @@ Para realizar a configuração dos filhos, basta incluir o parâmetro **"childre
 		{
 			"entityName": "bankAccount",
 			"base64Key": true,
-			"keys": [ "bank", "account" ]
+			"keys": [ "bank", "account" ],
             "children": [
                 {
                     "entityName": "transaction",
