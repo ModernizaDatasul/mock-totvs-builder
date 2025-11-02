@@ -1,16 +1,2 @@
-=> Incluir variáveis
-- ter os mesmos filtros do validation
-- campos:
-  field: se não existir, no retorno cria.
-  Função: substitui mesmo com valor ou só se for nulo
-- data/hora/datetime - atual
-- tamanho do DB
-- Próximo ID - com base na chave
-- Aleatório - vários tipos
-- O campo deve ser do mesmo tipo da variável
-- dizer o tipo da variável
-
-=> Parametrizar um delay
-   - Para simular backend lento
-
-=> Rota - Parâmetro para não atualizar o DB
+=> Rota 
+- Parâmetro para não atualizar o DB

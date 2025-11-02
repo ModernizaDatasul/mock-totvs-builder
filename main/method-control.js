@@ -52,6 +52,8 @@ module.exports = {
 
         const newEntity = req.body;
 
+        this.autoUpdateFields(entityCfg, 'POST', 'create', newEntity, entityCfg.database);
+
         const entityId = this.getEntityKeyValue(newEntity, entityCfg.keys, entityCfg.keysSeparator);
         if (!req.params) req["params"] = {};
         if (type === "GRANDSON") {
@@ -103,6 +105,8 @@ module.exports = {
                 entityCfg.database[index][property] = req.body[property];
             }
         });
+
+        this.autoUpdateFields(entityCfg, 'PUT', 'update', entityCfg.database[index], entityCfg.database);
 
         fileUts.saveFile(fileName, mainEntityCfg);
 
@@ -246,6 +250,12 @@ module.exports = {
 
             if (method !== 'GET') {
                 if (customRoute.savePayload && req.body && Object.keys(req.body).length > 0) {
+                    this.autoUpdateFields(entityCfg, method, customRoute.name, req.body, entityCfg[customRoute.database]);
+
+                    if (response && response.items && response.items.length === 0) {
+                        response.items.push(req.body);
+                    }
+
                     entityCfg[customRoute.database].push(req.body);
                     fileUts.saveFile(fileName, entityCfg);
                 }
@@ -511,22 +521,126 @@ module.exports = {
         return errorCustVld;
     },
 
-    async doDelayedRoute(entityCfg, routeName) {
-        if (!entityCfg.delayRoute || entityCfg.delayRoute.length === 0) { return; }
-
-        let routeFound = entityCfg.delayRoute.find(route => route.name === routeName);
-        if (!routeFound) { return; }
-        if (!routeFound.delay || routeFound.delay <= 0) { return; }
-
-        console.log(`Delaying route '${routeName}' for ${routeFound.delay} ms`);
-
-        // Simulate slow route - wait for the configured delay
-        await new Promise(resolve => setTimeout(resolve, routeFound.delay));
-    },
-
     makeCustomValidError(custVld, field) {
         return this.errorBuilder(400, `${custVld.msgError} (${field}).`,
             `${custVld.msgError} (${field}). customValidation: ${custVld.name}.`);
+    },
+
+    autoUpdateFields(entityCfg, method, routeName, entity, database) {
+        if (method !== 'POST' && method !== 'PUT') { return; }
+
+        if (!entityCfg.autoUpdateFields || entityCfg.autoUpdateFields.length === 0) { return; }
+
+        let autoUpdCfg = entityCfg.autoUpdateFields.find(autoField => autoField.route.includes(routeName));
+        if (!autoUpdCfg) { return; }
+
+        if (!autoUpdCfg.field || !autoUpdCfg.dataType) { return; }
+
+        if (!autoUpdCfg.overlay && entity.hasOwnProperty(autoUpdCfg.field) && autoUpdCfg.field) { return; }
+
+        let fieldValue = this.replaceFieldValue((routeName !== 'update'), database, autoUpdCfg.field, autoUpdCfg.dataType, autoUpdCfg.value);
+
+        if (autoUpdCfg.dataType === 'string') { entity[autoUpdCfg.field] = fieldValue; return; }
+        if (autoUpdCfg.dataType === 'boolean') { entity[autoUpdCfg.field] = (fieldValue === 'true'); return; }
+        if (autoUpdCfg.dataType === 'date') { entity[autoUpdCfg.field] = fieldValue; return; }
+        if (autoUpdCfg.dataType === 'number') { 
+            entity[autoUpdCfg.field] = fieldValue.includes('.') ? parseFloat(fieldValue) : parseInt(fieldValue); 
+            return; 
+        }
+    },
+
+    replaceFieldValue(isNewRecord, database, field, dataType, value) {
+        let fieldValue = value;
+
+        // #A# - Um caracter aleatório de A a Z. Aceita para atributo do tipo: string.
+        if (dataType === 'string') {
+            if (fieldValue.includes('#A#')) {
+                fieldValue = fieldValue.replace(/#A#/g, () => {
+                    const charCode = Math.floor(Math.random() * 26) + 65; // Códigos ASCII de A (65) a Z (90)
+                    return String.fromCharCode(charCode);
+                });
+            }
+        }
+
+        // #9# - Um número aleatório de 0 a 9. Aceita para atributos do tipos: number e string.
+        if (dataType === 'string' || dataType === 'number') {
+            if (fieldValue.includes('#9#')) {
+                fieldValue = fieldValue.replace(/#9#/g, () => {
+                    return Math.floor(Math.random() * 10).toString();
+                });
+            }
+        }
+
+        // #L# - Um valor aleatório entre true ou false. Aceita para atributos do tipos: boolean e string. 
+        if (dataType === 'string' || dataType === 'boolean') {
+            if (fieldValue.includes('#L#')) {
+                fieldValue = fieldValue.replace(/#L#/g, () => {
+                    return (Math.random() < 0.5).toString();
+                });
+            }
+        }
+
+        // #TODAY# - A data atual, no formato: "YYYY-MM-DD". Aceita para atributos do tipos: date e string.  
+        if (dataType === 'string' || dataType === 'date') {
+            if (fieldValue.includes('#TODAY#')) {
+                const today = (new Date()).toISOString().split('T')[0];;
+                fieldValue = fieldValue.replace(/#TODAY#/g, today);
+            }
+        }
+
+        // #NOW# - A data e hora atual, no formato: "YYYY-MM-DDTHH:mm:ss.sssZ". Aceita para atributos do tipos: date e string.
+        if (dataType === 'string' || dataType === 'date') {
+            if (fieldValue.includes('#NOW#')) {
+                const now = (new Date()).toISOString();
+                fieldValue = fieldValue.replace(/#NOW#/g, now);
+            }
+        }
+
+        // #TIME# - A hora atual, no formato: "HH:MM:SS". Aceito para atributos do tipo: string.
+        if (dataType === 'string') {
+            if (fieldValue.includes('#TIME#')) {
+                const now = new Date();
+                const time = now.toTimeString().split(' ')[0];
+                fieldValue = fieldValue.replace(/#TIME#/g, time);
+            }
+        }
+
+        // #DBSIZE# - Quantidade de registros do database da rota. Aceita para atributos do tipos: number e string.
+        if (dataType === 'string' || dataType === 'number') {
+            if (fieldValue.includes('#DBSIZE#')) {
+                let dbSize = database.length;
+                if (isNewRecord) { dbSize = dbSize + 1; }
+                fieldValue = fieldValue.replace(/#DBSIZE#/g, dbSize.toString());
+            }
+        }
+
+        // #NEXT# - Próximo valor do atributo. Para buscar o próximo valor, será considerado o maior valor entre os registros existentes no database da rota e somado 1. Aceita para atributo do tipo: number.
+        if (dataType === 'number') {
+            if (fieldValue.includes('#NEXT#')) {
+                let maxValue = 0;
+                if (database && database.length > 0) {
+                    maxValue = Math.max(...database.map(item => item[field] || 0));
+                }
+                maxValue = maxValue + 1;
+
+                fieldValue = fieldValue.replace(/#NEXT#/g, maxValue.toString());
+            }
+        }
+
+        return fieldValue;
+    },
+
+    async doDelayedRoute(entityCfg, routeName) {
+        if (!entityCfg.delayRoute || entityCfg.delayRoute.length === 0) { return; }
+
+        let dlyRouteCfg = entityCfg.delayRoute.find(dlyRoute => dlyRoute.route === routeName);
+        if (!dlyRouteCfg) { return; }
+        if (!dlyRouteCfg.delay || dlyRouteCfg.delay <= 0) { return; }
+
+        console.log(`Delaying route '${routeName}' for ${dlyRouteCfg.delay} ms`);
+
+        // Simulate slow route - wait for the configured delay
+        await new Promise(resolve => setTimeout(resolve, dlyRouteCfg.delay));
     },
 
     getEntityKeyValue(entity, entityKeys, keysSeparator) {

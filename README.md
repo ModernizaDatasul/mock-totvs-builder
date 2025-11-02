@@ -22,7 +22,8 @@ Para cada entidade, deverá existir um arquivo de configuração no formato **"J
 |**children**<br>(array)|Não|Lista de filhos da entidade. Utilizado para quando a entidade possui filhos diretos alinhados (que fazem parte da estrutura da entidade).<br>Para mais detalhes e configuração, verificar o tópico: **Configurando Filhos da Entidade**.|```[{"entityName": "contacts", "entityLabel": "Contato", "keys": ["seq"]},```<br>```{"entityName": "bankAccount", "base64Key": true, "keys": ["bank", "account"]}]```|
 |**customRoutes**<br>(array)|Não|Lista de Rotas customizadas. Utilizado para quando as rotas padrões (ver tópico: **Rotas Pré-definidas**) não atendem.<br>Para configurar as rotas, verificar o tópico: **Configurando Rotas Customizadas**.|```[{"name": "nextId", "method": "GET", "path": "/nextId", "database": "db_nextId"},```<br>```{"name": "block", "method": "POST", "path": "/:idParam/block", "database": "db_block"}]```|
 |**customValidation**<br>(array)|Não|Lista de Validações customizadas. Utilizado para simular erros/validações executadas pelo BackEnd.<br>Para configurar as validações, verificar o tópico: **Configurando Validações Customizadas**.|```[{"name": "vld_block","method": ["DELETE"],"from": ["payload","database"],"field": ["status"],"operation": "=","value": 3,"msgError": "Cliente está Bloqueado !"}]```|
-|**delayRoute**<br>(array)|Não|Configuração para simular uma **demora** do BackEnd. Deve ser informado o nome da Rota e a quantidade de delay em milisegundos. Por exemplo, ao informar um delay de 3000 milisegundos, a ser executada a Rota, ela irá demorar 3 segundos para responder. Para realizar a configuração em Rotas Pré-definidas, informe o nome da Rota conforme descrito no tópico **Rotas Pré-definidas**. Para Rotas customizadas, informa o parâmetro **name** da Rota.|```[{"name": "query", "delay": 5000},{"name": "totalByStatus", "delay": 3000}]```|
+|**autoUpdateFields**<br>(array)|Não|Atualização automática de atributos.<br>Para realizar a configuração, verificar o tópico: **Configurando Atualização Automática de Atributos**.|```[{"route": ["create"], "field": "code", "dataType": "number", "value": "#NEXT#"}]```|
+|**delayRoute**<br>(array)|Não|Simulação de **demora** do BackEnd. Para realizar a configuração, deve ser informado o nome da Rota e a quantidade de delay em milisegundos. Por exemplo, ao informar um delay de 3000 milisegundos, a ser executada a Rota, ela irá demorar 3 segundos para responder. A Rota pode ser uma Pré-Definida (ver tópico: **Rotas Pré-definidas**, coluna **name**) ou uma Customizada (ver tópico: **Configurando Rotas Customizadas**, parâmetro **name**).|```[{"route": "query", "delay": 5000},{"route": "totalByStatus", "delay": 3000}]```|
 |**database**<br>(array)|Sim|Registros da Entidade, contendo a entidade completa, com todos os atributos necessários.|```[{"company": 10, "code": 1, "shortName": "João", "name": "Joãozinho Maria da Silva" },```<br>```{"company": 10, "code": 2, "shortName": "Maria", "name": "Maria Barbosa"}]```|
 |**queryCustomInf**<br>(object)|Não|A Rota Pré-definida de **query** sempre irá retorna um objeto JSON no formato **TotvsResponse** (atributos: total, hasNext e items). Caso seja necessário devolver atributos adicionais, é possível envia-los através deste parâmetro.|```{"totalGeral": 300, "hasViewPermission": true}```|
 
@@ -511,6 +512,80 @@ Segue abaixo uma tabela com exemplos de validações customizadas:
 		}
 	]
 }
+```
+
+# Configurando Atualização Automática de Atributos
+
+É possível realizar configurações para indicar que determinados atributos sejam atualizados de forma automática. Podendo ser atualizados com informações fixas e/ou variáveis. Para realizar esta configuração, basta incluir o parâmetro **"autoUpdateFields"** no arquivo de configuração da Entidade, indicando os atributos. Abaixo segue os parâmetros que podem ser utilizados na configuração:
+|Parâmetro|Obrig?|Descrição|Exemplos|
+|--|--|--|--|
+|**route**<br>(array)|Sim|Lista de rotas onde o atributo será atualizado. As Rotas podem ser Pré-Definidas (ver tópico: **Rotas Pré-definidas**, coluna **name**) ou Customizadas (ver tópico: **Configurando Rotas Customizadas**, parâmetro **name**).<br>**Observação**: A configuração somente irá funcionar para rotas que utilizam os métodos **"PUT"** ou **"POST"**.|```["create", "update"]```|
+|**field**<br>(string)|Sim|Nome do atributo que irá receber a informação de forma automática.<br>**Observação**: Se o atributo não existir na entidade, ele será criado, durante a execução da rota.|```"history"```|
+|**dataType**<br>(string)|Sim|Tipo de dado do atributo informado. Podendo ser **string**, **number**, **boolean** ou **date**.|```"string"```|
+|**overlay**<br>(logical)|Não|Indica que o atributo deve ser atualizado mesmo que ele já possua um valor.<br>**Observação**: Se não for informado, será considerado como "false", isto é, se o atributo já existir no registro e ele já possuir um valor, o atributo não será atualizado.|```"true"```|
+|**value**<br>(string)|Sim|Valor que deve ser atualizado no atributo. Podendo ser valores fixos, variáveis ou uma combinação deles. Mas, deve respeitar o tipo de dado do atributo. Para os valores variáveis, ver a tabela abaixo **Variáveis**.<br>**Observação**: Independente do tipo de dado do atributo, o valor informado aqui deve estar entre **aspas**. Durante a atualização, o valor será convertido para o tipo de dado do atributo.|```"Registro atualizado em: #TODAY# - #TIME#."```|
+
+**Variáveis**
+
+As variáveis serão substituídas antes de atualizar o valor no atributo, conforme a regra de cada uma delas. Elas podem ser utilizadas em qualquer posição dentro do valor. Além disso, uma mesma variável pode ser utilizada várias vezes.<br>**Importante**: Cada variável só pode ser utilizada para alguns tipos de dados, que devem ser compatíveis com o tipo de dado do atributo informado. Os tipos permitidos estão descritos na coluna **tipo**.
+
+|Variável|Tipo|Descrição|
+|--|--|--|
+|**#NEXT#**|number|Próximo valor do atributo. Para buscar o próximo valor, será considerado o maior valor do atributo entre os registros existentes no database da rota e somado 1.|
+|**#A#**|string|Um caracter aleatório de A a Z.|
+|**#9#**|number ou string|Um número aleatório de 0 a 9.|
+|**#L#**|boolean ou string|Um valor aleatório entre true ou false.| 
+|**#TODAY#**|date ou string|A data atual, no formato: "YYYY-MM-DD".|
+|**#NOW#**|date ou string|A data e hora atual, no formato:  ISO 8601 ("YYYY-MM-DDTHH:mm:ss.sssZ").|
+|**#TIME#**|string|A hora atual, no formato: "HH:MM:SS".|
+|**#DBSIZE#**|number ou string|Quantidade atual de registros do database da rota.|
+
+**Exemplo da Configuração de Atualização Automática de Atributos**
+
+Abaixo segue alguns exemplos de como a Atualização Automática de Atributos pode ser utilizada e como deve ser configurada.
+
+1) Considerando que o atributo "code" é a chave de uma entidade e ela deve ser atualizada de forma automática e sequencial a cada novo registro incluído:
+```
+"autoUpdateFields": [
+	{
+		"route": [ "create" ],
+		"field": "code",
+		"dataType": "number",
+		"overlay": true,
+		"value": "#NEXT#"
+	}
+]
+```
+2) Na entidade existem dois atributos: "dtLastUpdate" e "hrLastUpdate" que são utilizados para registrar a data e hora da última atualização do registro:
+```
+"autoUpdateFields": [
+	{
+		"route": [ "create", "update" ],
+		"field": "dtLastUpdate",
+		"dataType": "date",
+		"overlay": true,
+		"value": "#TODAY#"
+	},
+	{
+		"route": [ "create", "update" ],
+		"field": "hrLastUpdate",
+		"dataType": "string",
+		"overlay": true,
+		"value": "#TIME#"
+	}	
+]
+```
+3) A entidade possui uma rota customizada chamada "payment", que é utilizada para criar transações de pagamento. A cada nova transação, o atributo "nsu" deve ser atualizado automaticamente como um valor no formato: quarto caracteres + dois números + "/" + data e hora da transação.
+```
+"autoUpdateFields": [
+	{
+		"route": [ "payment" ],
+		"field": "nsu",
+		"dataType": "string",
+		"overlay": true,
+		"value": "#A##A##A##A##9##9#/#NOW#"
+	}	
+]
 ```
 
 # Executando o mock-totvs-builder
