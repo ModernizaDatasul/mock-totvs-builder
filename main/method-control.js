@@ -140,18 +140,26 @@ module.exports = {
     getConfigByType(req, res, entityCfg, type, entityName, entityFatherName) {
         if (type === "CHILDREN") {
             const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityName, "FATHER", "isChildrenCfg");
-            if (!childrenCfg.isChildrenCfg) {
-                return childrenCfg;
-            }
+            if (!childrenCfg.isChildrenCfg) { return childrenCfg; }
             entityCfg = childrenCfg;
         }
 
         if (type === "GRANDSON") {
             const grandsonCfg = this.getGrandsonCfg(req, res, entityCfg, entityName, entityFatherName);
-            if (!grandsonCfg.isGrandsonCfg) {
-                return grandsonCfg;
-            }
+            if (!grandsonCfg.isGrandsonCfg) { return grandsonCfg; }
             entityCfg = grandsonCfg;
+        }
+
+        if (type === "CHILDREN_D") {
+            const children_dCfg = this.getChildren_dCfg(entityCfg, entityName, "isChildren_dCfg");
+            if (!children_dCfg.isChildren_dCfg) { return children_dCfg; }
+            entityCfg = children_dCfg;
+        }
+
+        if (type === "GRANDSON_D") {
+            const grandson_dCfg = this.getGrandson_dCfg(entityCfg, entityName, entityFatherName);
+            if (!grandson_dCfg.isGrandson_dCfg) { return grandson_dCfg; }
+            entityCfg = grandson_dCfg;
         }
 
         return entityCfg;
@@ -183,20 +191,82 @@ module.exports = {
     },
 
     getGrandsonCfg(req, res, entityCfg, entityName, entityFatherName) {
-
         // Busca configuração do Filho
         const childrenCfg = this.getChildrenCfg(req, res, entityCfg, entityFatherName, "FATHER", "isChildrenCfg");
-        if (!childrenCfg.isChildrenCfg) {
-            return childrenCfg;
-        }
+        if (!childrenCfg.isChildrenCfg) { return childrenCfg; }
 
         // Busca configuração do Neto
         const grandsonCfg = this.getChildrenCfg(req, res, childrenCfg, entityName, "CHILDREN", "isGrandsonCfg");
-        if (!grandsonCfg.isGrandsonCfg) {
-            return grandsonCfg;
-        }
+        if (!grandsonCfg.isGrandsonCfg) { return grandsonCfg; }
 
         return grandsonCfg;
+    },
+
+    getChildren_dCfg(entityCfg, entityName, cfgType) {
+        let children_dCfgOrig = entityCfg.children.find((entity) => {
+            return entity.entityName === entityName;
+        });
+
+        let fatherKeys = [];
+        if (children_dCfgOrig.directyRoute && children_dCfgOrig.directyRoute.addFatherKey) {
+            fatherKeys = entityCfg.keys;
+        }
+
+        return this.getDirectyCfg(entityCfg, children_dCfgOrig, cfgType, fatherKeys);
+    },
+
+    getDirectyCfg(fatherCfg, children_dCfgOrig, cfgType, fatherKeys) {
+        var children_dCfg = { ...children_dCfgOrig }
+
+        children_dCfg[cfgType] = true;
+
+        let property = children_dCfg.property;
+        if (!property) { property = children_dCfg.entityName; }
+
+        let database = [];
+        fatherCfg.database.forEach((entityFather) => {
+            if (entityFather[property] && Array.isArray(entityFather[property])) {
+                let dbFather = genUts.copyArray(entityFather[property]);
+
+                if (fatherKeys.length > 0) {
+                    dbFather.forEach((child) => {
+                        fatherKeys.forEach(entityKey => {
+                            child[entityKey] = entityFather[entityKey];
+                        });
+                    });
+                }
+
+                database = database.concat(dbFather);
+            }
+        });
+        children_dCfg["database"] = database;
+
+        return children_dCfg;
+    },
+
+    getGrandson_dCfg(entityCfg, entityName, entityChildrenName) {
+        let children_dCfgOrig = entityCfg.children.find((entity) => {
+            return entity.entityName === entityChildrenName;
+        });
+
+        let grandson_dCfgOrig = children_dCfgOrig.children.find((entity) => {
+            return entity.entityName === entityName;
+        });
+
+        let addFatherKey = grandson_dCfgOrig.directyRoute && grandson_dCfgOrig.directyRoute.addFatherKey;
+        let fatherKeys = [];
+
+        // Busca configuração do Filho
+        if (addFatherKey) { fatherKeys = fatherKeys.concat(entityCfg.keys); }
+        const children_dCfg = this.getDirectyCfg(entityCfg, children_dCfgOrig, "isChildren_dCfg", fatherKeys);
+        if (!children_dCfg.isChildren_dCfg) { return children_dCfg; }
+
+        // Busca configuração do Neto
+        if (addFatherKey) { fatherKeys = fatherKeys.concat(children_dCfg.keys); }
+        const grandson_dCfg = this.getDirectyCfg(children_dCfg, grandson_dCfgOrig, "isGrandson_dCfg", fatherKeys);
+        if (!grandson_dCfg.isGrandson_dCfg) { return grandson_dCfg; }
+
+        return grandson_dCfg;
     },
 
     getRecordIndex(method, route, req, res, entityCfg, type) {
@@ -543,9 +613,9 @@ module.exports = {
         if (autoUpdCfg.dataType === 'string') { entity[autoUpdCfg.field] = fieldValue; return; }
         if (autoUpdCfg.dataType === 'boolean') { entity[autoUpdCfg.field] = (fieldValue === 'true'); return; }
         if (autoUpdCfg.dataType === 'date') { entity[autoUpdCfg.field] = fieldValue; return; }
-        if (autoUpdCfg.dataType === 'number') { 
-            entity[autoUpdCfg.field] = fieldValue.includes('.') ? parseFloat(fieldValue) : parseInt(fieldValue); 
-            return; 
+        if (autoUpdCfg.dataType === 'number') {
+            entity[autoUpdCfg.field] = fieldValue.includes('.') ? parseFloat(fieldValue) : parseInt(fieldValue);
+            return;
         }
     },
 

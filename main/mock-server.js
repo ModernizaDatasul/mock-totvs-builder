@@ -81,7 +81,7 @@ module.exports = {
     },
 
     makeCRUDRoute(app, fileName, entityCfg) {
-        this.makeDefaultRoute(app, fileName, entityCfg, entityCfg.mainPath, "CRUD", entityCfg.entityName, "");
+        this.makeDefaultRoute(app, fileName, entityCfg, entityCfg.mainPath, "CRUD", entityCfg.entityName, "", true);
     },
 
     makeCHILDRENRoute(app, fileName, entityCfg) {
@@ -90,7 +90,13 @@ module.exports = {
 
         entityCfg.children.forEach((childrenCfg) => {
             let childrenPath = entityCfg.mainPath + "/:idFather/" + childrenCfg.entityName;
-            this.makeDefaultRoute(app, fileName, entityCfg, childrenPath, "CHILDREN", childrenCfg.entityName, entityCfg.entityName);
+            this.makeDefaultRoute(app, fileName, entityCfg, childrenPath, "CHILDREN", childrenCfg.entityName, entityCfg.entityName, true);
+
+            if (childrenCfg.directyRoute && childrenCfg.directyRoute.enabled) {
+                let directyPath = "/" + childrenCfg.entityName;
+                this.makeDefaultRoute(app, fileName, entityCfg, directyPath, "CHILDREN_D", childrenCfg.entityName, entityCfg.entityName, false);
+            }
+
             this.makeGRANDSONRoute(app, fileName, entityCfg, childrenCfg, childrenPath);
         });
     },
@@ -101,11 +107,16 @@ module.exports = {
 
         childrenCfg.children.forEach((grandsonCfg) => {
             let grandsonPath = childrenPath + "/:idSon/" + grandsonCfg.entityName;
-            this.makeDefaultRoute(app, fileName, entityCfg, grandsonPath, "GRANDSON", grandsonCfg.entityName, childrenCfg.entityName);
+            this.makeDefaultRoute(app, fileName, entityCfg, grandsonPath, "GRANDSON", grandsonCfg.entityName, childrenCfg.entityName, true);
+
+            if (grandsonCfg.directyRoute && grandsonCfg.directyRoute.enabled) {
+                let directyPath = "/" + grandsonCfg.entityName;
+                this.makeDefaultRoute(app, fileName, entityCfg, directyPath, "GRANDSON_D", grandsonCfg.entityName, childrenCfg.entityName, false);
+            }
         });
     },
 
-    makeDefaultRoute(app, fileName, entityCfg, entityPath, type, entityName, entityFatherName) {
+    makeDefaultRoute(app, fileName, entityCfg, entityPath, type, entityName, entityFatherName, routesOfUpdate) {
         let idParam = '/:id';
         if (type === "CHILDREN") { idParam = '/:idSon' }
         if (type === "GRANDSON") { idParam = '/:idGrandson' }
@@ -118,17 +129,19 @@ module.exports = {
             return methodCtrl.get(req, res, entityCfg, type, entityName, entityFatherName);
         });
 
-        app.post(entityPath, function (req, res) {
-            return methodCtrl.create(req, res, entityCfg, fileName, type, entityName, entityFatherName);
-        });
+        if (routesOfUpdate) {
+            app.post(entityPath, function (req, res) {
+                return methodCtrl.create(req, res, entityCfg, fileName, type, entityName, entityFatherName);
+            });
 
-        app.put(entityPath + idParam, function (req, res) {
-            return methodCtrl.update(req, res, entityCfg, fileName, type, entityName, entityFatherName);
-        });
+            app.put(entityPath + idParam, function (req, res) {
+                return methodCtrl.update(req, res, entityCfg, fileName, type, entityName, entityFatherName);
+            });
 
-        app.delete(entityPath + idParam, function (req, res) {
-            return methodCtrl.delete(req, res, entityCfg, fileName, type, entityName, entityFatherName);
-        });
+            app.delete(entityPath + idParam, function (req, res) {
+                return methodCtrl.delete(req, res, entityCfg, fileName, type, entityName, entityFatherName);
+            });
+        }
     },
 
     makeCustomRoute(app, projRootDir, fileName, entityCfg) {

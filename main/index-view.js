@@ -62,8 +62,17 @@ module.exports = {
                 qtdRoutesDefauts = qtdRoutesDefauts + (entityCfg.children.length * 5);
 
                 entityCfg.children.forEach((children) => {
+                    if (children.directyRoute && children.directyRoute.enabled) {
+                        qtdRoutesDefauts = qtdRoutesDefauts + 2;
+                    }
                     if (children.children) {
                         qtdRoutesDefauts = qtdRoutesDefauts + (children.children.length * 5);
+
+                        children.children.forEach((grandson) => {
+                            if (grandson.directyRoute && grandson.directyRoute.enabled) {
+                                qtdRoutesDefauts = qtdRoutesDefauts + 2;
+                            }
+                        });
                     }
                 });
             }
@@ -105,29 +114,44 @@ module.exports = {
     showRoutes(req, res, entityCfg) {
         const entityRoutes = [];
 
-        this.addRouteDefault(entityRoutes, "CRUD", "query", "GET", "", false, "array", JSON.stringify(entityCfg.queryCustomInf));
-        this.addRouteDefault(entityRoutes, "CRUD", "get", "GET", "/:id", false, "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "create", "POST", "", true, "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "update", "PUT", "/:id", true, "object", null);
-        this.addRouteDefault(entityRoutes, "CRUD", "delete", "DELETE", "/:id", false, "object", null);
+        let path = entityCfg.mainPath;
+        this.addRouteDefault(entityRoutes, "CRUD", "query", "GET", path, false, "array", JSON.stringify(entityCfg.queryCustomInf));
+        this.addRouteDefault(entityRoutes, "CRUD", "get", "GET", `${path}/:id`, false, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "create", "POST", path, true, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "update", "PUT", `${path}/:id`, true, "object", null);
+        this.addRouteDefault(entityRoutes, "CRUD", "delete", "DELETE", `${path}/:id`, false, "object", null);
 
         if (entityCfg.children) {
             entityCfg.children.forEach((children) => {
-                this.addRouteDefault(entityRoutes, "CHILDREN", "query", "GET", "/:idFather/" + children.entityName, false, "array", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "get", "GET", "/:idFather/" + children.entityName + "/:idSon", false, "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "create", "POST", "/:idFather/" + children.entityName, true, "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon", true, "object", null);
-                this.addRouteDefault(entityRoutes, "CHILDREN", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon", false, "object", null);
+                let path = `${entityCfg.mainPath}/:idFather/${children.entityName}`;
+                this.addRouteDefault(entityRoutes, "CHILDREN", "query", "GET", path, false, "array", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "get", "GET", `${path}/:idSon`, false, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "create", "POST", path, true, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "update", "PUT", `${path}/:idSon`, true, "object", null);
+                this.addRouteDefault(entityRoutes, "CHILDREN", "delete", "DELETE", `${path}/:idSon`, false, "object", null);
+
+                if (children.directyRoute && children.directyRoute.enabled) {
+                    let path = `/${children.entityName}`;
+                    this.addRouteDefault(entityRoutes, "CHILDREN_D", "query", "GET", path, false, "array", null);
+                    this.addRouteDefault(entityRoutes, "CHILDREN_D", "get", "GET", `${path}/:id`, false, "object", null);
+                }
 
                 if (children.children) {
                     children.children.forEach((grandson) => {
-                        this.addRouteDefault(entityRoutes, "GRANDSON", "query", "GET", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName, false, "array", null);
-                        this.addRouteDefault(entityRoutes, "GRANDSON", "get", "GET", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", false, "object", null);
-                        this.addRouteDefault(entityRoutes, "GRANDSON", "create", "POST", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName, true, "object", null);
-                        this.addRouteDefault(entityRoutes, "GRANDSON", "update", "PUT", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", true, "object", null);
-                        this.addRouteDefault(entityRoutes, "GRANDSON", "delete", "DELETE", "/:idFather/" + children.entityName + "/:idSon/" + grandson.entityName + "/:idGrandson", false, "object", null);
+                        let path = `${entityCfg.mainPath}/:idFather/${children.entityName}/:idSon/${grandson.entityName}`;
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "query", "GET", path, false, "array", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "get", "GET", `${path}/:idGrandson`, false, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "create", "POST", path, true, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "update", "PUT", `${path}/:idGrandson`, true, "object", null);
+                        this.addRouteDefault(entityRoutes, "GRANDSON", "delete", "DELETE", `${path}/:idGrandson`, false, "object", null);
+
+                        if (grandson.directyRoute && grandson.directyRoute.enabled) {
+                            let path = `/${grandson.entityName}`;
+                            this.addRouteDefault(entityRoutes, "GRANDSON_D", "query", "GET", path, false, "array", null);
+                            this.addRouteDefault(entityRoutes, "GRANDSON_D", "get", "GET", `${path}/:id`, false, "object", null);
+                        }
                     });
-                }                
+                }
             });
         }
 
@@ -135,8 +159,8 @@ module.exports = {
             entityCfg.customRoutes.forEach((customRoute) => {
                 entityRoutes.push({
                     type: "CUSTOM", name: customRoute.name, method: customRoute.method,
-                    path: customRoute.path, savePayload: customRoute.savePayload, script: customRoute.script,
-                    fileParam: JSON.stringify(customRoute.fileParam),
+                    path: entityCfg.mainPath + customRoute.path, savePayload: customRoute.savePayload,
+                    script: customRoute.script, fileParam: JSON.stringify(customRoute.fileParam),
                     responseType: customRoute.responseType, database: customRoute.database,
                     queryCustomInf: JSON.stringify(customRoute.queryCustomInf)
                 });
@@ -166,7 +190,7 @@ module.exports = {
             res.write(`  <td>${entityRoute.type}</td>`);
             res.write(`  <td>${entityRoute.name}</td>`);
             res.write(`  <td style="text-align: center">${entityRoute.method}</td>`);
-            res.write(`  <td>${entityCfg.mainPath}${entityRoute.path}</td>`);
+            res.write(`  <td>${entityRoute.path}</td>`);
             res.write(`  <td>${entityRoute.savePayload || false}</td>`);
             res.write(`  <td>${entityRoute.script || ''}</td>`);
             res.write(`  <td>${entityRoute.fileParam || ''}</td>`);
