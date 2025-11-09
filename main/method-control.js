@@ -7,12 +7,12 @@ module.exports = {
     async query(req, res, mainEntityCfg, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'GET (query)', req);
 
-        await this.doDelayedRoute(mainEntityCfg, 'query');
-
         let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
         if (!entityCfg) {
             return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
+
+        await this.doDelayedRoute(entityCfg, 'query');
 
         let customVld = this.customValidationParams('GET', 'query', req, res, entityCfg);
         if (customVld) { return customVld; };
@@ -25,12 +25,12 @@ module.exports = {
     async get(req, res, mainEntityCfg, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'GET', req);
 
-        await this.doDelayedRoute(mainEntityCfg, 'get');
-
         let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
         if (!entityCfg) {
             return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
+
+        await this.doDelayedRoute(entityCfg, 'get');
 
         const index = this.getRecordIndex('GET', 'get', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
@@ -43,12 +43,12 @@ module.exports = {
     async create(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'POST (create)', req);
 
-        await this.doDelayedRoute(mainEntityCfg, 'create');
-
         let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
         if (!entityCfg) {
             return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
+
+        await this.doDelayedRoute(entityCfg, 'create');
 
         const newEntity = req.body;
 
@@ -88,12 +88,12 @@ module.exports = {
     async update(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'PUT (update)', req);
 
-        await this.doDelayedRoute(mainEntityCfg, 'update');
-
         let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
         if (!entityCfg) {
             return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
+
+        await this.doDelayedRoute(entityCfg, 'update');
 
         const index = this.getRecordIndex('PUT', 'update', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
@@ -116,12 +116,12 @@ module.exports = {
     async delete(req, res, mainEntityCfg, fileName, type, entityName, entityFatherName) {
         this.logRequest(type, entityName, 'DELETE', req);
 
-        await this.doDelayedRoute(mainEntityCfg, 'delete');
-
         let entityCfg = this.getConfigByType(req, res, mainEntityCfg, type, entityName, entityFatherName);
         if (!entityCfg) {
             return this.errorBuilderReturn([this.errorBuilder(404, `Configuração da Entidade ${entityName} não encontrada.`)]);
         }
+
+        await this.doDelayedRoute(entityCfg, 'delete');
 
         const index = this.getRecordIndex('DELETE', 'delete', req, res, entityCfg, type);
         if (typeof (index) !== 'number') {
@@ -207,18 +207,22 @@ module.exports = {
             return entity.entityName === entityName;
         });
 
-        let fatherKeys = [];
-        if (children_dCfgOrig.directyRoute && children_dCfgOrig.directyRoute.addFatherKey) {
-            fatherKeys = entityCfg.keys;
+        let fatherFields = [];
+        fatherFields = fatherFields.concat(entityCfg.keys);
+
+        if (Array.isArray(children_dCfgOrig.directyRoute.addFatherFields)) {
+            fatherFields = fatherFields.concat(children_dCfgOrig.directyRoute.addFatherFields);
         }
 
-        return this.getDirectyCfg(entityCfg, children_dCfgOrig, cfgType, fatherKeys);
+        return this.getDirectyCfg(entityCfg, children_dCfgOrig, cfgType, fatherFields);
     },
 
-    getDirectyCfg(fatherCfg, children_dCfgOrig, cfgType, fatherKeys) {
+    getDirectyCfg(fatherCfg, children_dCfgOrig, cfgType, fatherFields) {
         var children_dCfg = { ...children_dCfgOrig }
 
         children_dCfg[cfgType] = true;
+
+        children_dCfg.keys = fatherCfg.keys.concat(children_dCfg.keys);
 
         let property = children_dCfg.property;
         if (!property) { property = children_dCfg.entityName; }
@@ -226,17 +230,20 @@ module.exports = {
         let database = [];
         fatherCfg.database.forEach((entityFather) => {
             if (entityFather[property] && Array.isArray(entityFather[property])) {
-                let dbFather = genUts.copyArray(entityFather[property]);
+                let dbChildren = genUts.copyArray(entityFather[property]);
 
-                if (fatherKeys.length > 0) {
-                    dbFather.forEach((child) => {
-                        fatherKeys.forEach(entityKey => {
-                            child[entityKey] = entityFather[entityKey];
+                if (fatherFields.length > 0) {
+                    dbChildren.forEach((child) => {
+                        fatherFields.forEach(fatherField => {
+                            if (!child.hasOwnProperty(fatherField) &&
+                                entityFather.hasOwnProperty(fatherField)) {
+                                child[fatherField] = entityFather[fatherField];
+                            }
                         });
                     });
                 }
 
-                database = database.concat(dbFather);
+                database = database.concat(dbChildren);
             }
         });
         children_dCfg["database"] = database;
@@ -253,17 +260,19 @@ module.exports = {
             return entity.entityName === entityName;
         });
 
-        let addFatherKey = grandson_dCfgOrig.directyRoute && grandson_dCfgOrig.directyRoute.addFatherKey;
-        let fatherKeys = [];
+        let fatherFields = [];
+        if (Array.isArray(grandson_dCfgOrig.directyRoute.addFatherFields)) {
+            fatherFields = fatherFields.concat(grandson_dCfgOrig.directyRoute.addFatherFields);
+        }
 
         // Busca configuração do Filho
-        if (addFatherKey) { fatherKeys = fatherKeys.concat(entityCfg.keys); }
-        const children_dCfg = this.getDirectyCfg(entityCfg, children_dCfgOrig, "isChildren_dCfg", fatherKeys);
+        fatherFields = fatherFields.concat(entityCfg.keys);
+        const children_dCfg = this.getDirectyCfg(entityCfg, children_dCfgOrig, "isChildren_dCfg", fatherFields);
         if (!children_dCfg.isChildren_dCfg) { return children_dCfg; }
 
         // Busca configuração do Neto
-        if (addFatherKey) { fatherKeys = fatherKeys.concat(children_dCfg.keys); }
-        const grandson_dCfg = this.getDirectyCfg(children_dCfg, grandson_dCfgOrig, "isGrandson_dCfg", fatherKeys);
+        fatherFields = fatherFields.concat(children_dCfg.keys);
+        const grandson_dCfg = this.getDirectyCfg(children_dCfg, grandson_dCfgOrig, "isGrandson_dCfg", fatherFields);
         if (!grandson_dCfg.isGrandson_dCfg) { return grandson_dCfg; }
 
         return grandson_dCfg;

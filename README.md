@@ -116,7 +116,9 @@ Para realizar a configuração dos filhos, basta incluir o parâmetro **"childre
 |**keys**<br>(array)|Sim|Lista de atributos que fazem parte da chave única do filho (desconsiderando a chave da entidade).<br>Quando a chave for composta, os atributos devem estar na ordem esperada.|Ex1 (chave simples):<br>```["seq"]```<br>Ex2 (chave composta):<br>```["bank","account"]```|
 |**keysSeparator**<br>(string)|Não|Caracter que será utilizado para concatenar as chaves do filho durante a busca de dados (get, update, delete), quando ele utilizar chave composta. O caracter deve corresponder ao que já é utilizado atualmente pelo FrontEnd para busca de dados. Por exemplo, para buscar o registro o FrontEnd dispara a requisição: ```/customer/1/bankAccount/001\|31232```, desta forma, o caracter utilizado para separar as chaves foi o pipe (**"\|"**), portanto este caracter deve ser utilizado neste parâmetro.<br>Se não for informado, será utilizado o caracter ponto-e-vírgula (**";"**) |Ex1:<br>```";"```<br>Ex2:<br>```"\|"```|
 |**base64Key**<br>(logical)|Não|Indica se a chave do filho é enviada em Base64 nas requisições de GET, PUT e DELETE. Caso afirmativo, a chave recebida será convertida **(base64 decode)** antes de realizar a busca da entidade. Se não informado, será considerado como **false**.|```false```<br>OU<br>```true```|
-|**children**<br>(array)|Não|Lista de filhos da entidade filha, isto é, entidade **neta** em relação a entidade principal. Utilizado para quando a entidade filha possui filhos diretos alinhados (que fazem parte da estrutura da entidade filha).<br>Da mesma forma como é feita para a entidade filha, serão criadas as **Rotas Pré-definidas** de **query, get, create, update, delete**. Sendo que no **Path** é acrescentado mais um nível (Ex get: ```/entidade/:idEntidade/filho/:idFilho/neto/:idNeto```).|```[{"entityName": "transaction", "entityLabel": "Transação Bancária", "keys": ["transactionId"]}]```|
+|**directyRoute**<br>(object)|Não|Indica que deve ser possível acessar os dados da entidade filha diretamente, sem depender do pai. Para isto, serão disponibilizadas duas novas rotas, uma de **QUERY** e uma de **GET**, onde o **path** será diretamente a entidade filha (parâmetro **entityName**). Por exemplo: a entidade pai é **customer** e a entidade filha **contact**. O acesso normal à entidade filha é feito através do pai com o path **/customer/:idCust/contact**. Com este parâmetro, é possível acessar a entidade filha através do path **/contact**. Para as consultas, será criado internamente um **novo database** contendo os dados de todos os filhos. Além disso, para que seja possível identificar um registro **único**, será incluído para todos os registros a chave do pai. Da mesma forma, para as consultas com a rota de **"GET"**, deverá ser utilizado como **ID** do registro uma composição da chave do pai + chave do filho, onde o separador utilizado será o informado no parâmetro **keysSeparator** (ser não informado, será considerado **";"**). Por exemplo, considerando que o pai tem a chave igual a **10** e o filho tem a chave igual a **7**, para fazer uma busca com **get**, deverá ser utilizado o ID: **10;7**. Caso necessário, também é possível indicar que outros atributos do pai sejam incluídos neste novo database. Para isto, basta incluir o parâmetro **"addFatherFields"**, passando a lista de atributos desejados, por exemplo: **"addFatherFields": ["shortName","status"]**. As consultas de **query** poderão ser realizadas com se a entidade fosse uma entidade pai, utilizando os queryParam de **fields**, **order**, **page**, etc...<br>**Importante:**<br>- Não deve existir outra entidade pai com o mesmo nome da entidade filha, se existir haverá um conflito de rotas;<br>- Se for utilizado o parâmetro **addFatherFields** e já existir na entidade filha um atributo com o mesmo nome, ele não será afetado, mantendo o mesmo valor que já possui;<br>- Esta configuração não afeta as demais configurações da entidade filha e nem a forma de utilização das demais rotas pré-definidas;<br>- O novo database não é salvo e é descartado depois da utilização.|```"directyRoute": {"enabled": true, "addFatherFields": ["shortName", "status"]}```|
+|**children**<br>(array)|Não|Lista de filhos da entidade filha, isto é, entidade **neta** em relação a entidade principal. Utilizado para quando a entidade filha possui filhos diretos alinhados (que fazem parte da estrutura da entidade filha).<br>Da mesma forma como é feita para a entidade filha, serão criadas as **Rotas Pré-definidas** de **query, get, create, update, delete**. Sendo que no **Path** é acrescentado mais um nível (Exemplo de get: ```/entidade/:idEntidade/filho/:idFilho/neto/:idNeto```).<br>Para entidade **"neta"**, poderão ser utilizadas as mesmas configurações existentes atualmente para a entidade **"filha"** (exemplo: entityName, keys, base64Key, etc...), com exceção do parâmetro **"children"**, que não pode ser utilizado.|```[{"entityName": "transaction", "entityLabel": "Transação Bancária", "keys": ["transactionId"]}]```|
+|**Parâmetros Adicionais**<br>(vários)|Não|Além dos parâmetros indicados nesta tabela, também poderão ser utilizados os parâmetros abaixo, que possuem as mesmas configurações e comportamentos descritos na tabela de configuração da entidade principal:<br>- **customSearchFields**<br>- **customValidation**<br>- **autoUpdateFields**<br>- **delayRoute**<br>- **queryCustomInf**|Ver parâmetros no tópico **Configurando Entidades**|
 
 **Exemplo Configuração:**
 
@@ -137,15 +139,19 @@ Para realizar a configuração dos filhos, basta incluir o parâmetro **"childre
 			"entityName": "bankAccount",
 			"base64Key": true,
 			"keys": [ "bank", "account" ],
-            "children": [
-                {
-                    "entityName": "transaction",
-                    "entityLabel": "Transação",
-                    "property": "transactions",
-                    "base64Key": false,
-                    "keys": [ "transactionId" ]
-                }
-            ]
+			"children": [
+				{
+					"entityName": "transaction",
+					"entityLabel": "Transação",
+					"property": "transactions",
+					"keys": [ "transactionId" ],
+					"base64Key": false,
+					"directyRoute": {
+						"enabled": true,
+						"addFatherFields": [ "shortName", "status" ]
+					}
+				}
+			]
 		}
 	]
 }
@@ -641,6 +647,4 @@ Para incorporar o mock-totvs-builder ao seu projeto, basta seguir os passos abai
 # Implementações Futuras
 - Validador do Arquivo de Configuração
 - Tratamento do expandables (por padrão não terá, mas poderá ser "ligado" via arq config)
-- Atributo auto incrementado
-- Variáveis no arquivo de configuração (ex: #today#)
 - Edição Entidade Config via html.
